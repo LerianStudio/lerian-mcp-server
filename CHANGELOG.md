@@ -1,3 +1,10 @@
+# [2.34.0](https://github.com/lerianstudio/lerian-mcp-server/compare/v2.33.0...v2.34.0) (2025-09-30)
+
+
+### Bug Fixes
+
+* **logging:** change logging to opt-in and add rotation to prevent log file growth ([9bcd215](https://github.com/lerianstudio/lerian-mcp-server/commit/9bcd21564ec3d70c0e69c895545a687ae4e7820b))
+
 # [2.33.0](https://github.com/lerianstudio/lerian-mcp-server/compare/v2.32.0...v2.33.0) (2025-08-08)
 
 # [2.32.0](https://github.com/lerianstudio/lerian-mcp-server/compare/v2.31.0...v2.32.0) (2025-06-13)
