@@ -13,13 +13,16 @@ const SECURITY_CONFIG = {
   allowedHosts: ['localhost', '127.0.0.1', '::1'],
   maxRequestSize: 1024 * 1024, // 1MB
   sensitiveFields: ['password', 'token', 'secret', 'apiKey', 'authorization'],
-  auditLogPath: path.join(__dirname, '../../logs/audit.log')
+  auditLogPath: path.join(__dirname, '../../logs/audit.log'),
+  auditLoggingEnabled: process.env.AUDIT_LOGGING === 'true' // Opt-in: set to 'true' to enable
 };
 
-// Ensure audit log directory exists
-const auditLogDir = path.dirname(SECURITY_CONFIG.auditLogPath);
-if (!fs.existsSync(auditLogDir)) {
-  fs.mkdirSync(auditLogDir, { recursive: true });
+// Ensure audit log directory exists (only if audit logging is enabled)
+if (SECURITY_CONFIG.auditLoggingEnabled) {
+  const auditLogDir = path.dirname(SECURITY_CONFIG.auditLogPath);
+  if (!fs.existsSync(auditLogDir)) {
+    fs.mkdirSync(auditLogDir, { recursive: true });
+  }
 }
 
 /**
@@ -86,6 +89,10 @@ export function sanitizeSensitiveData(data, depth = 0) {
  * Create audit log entry
  */
 export function createAuditLog(entry) {
+  if (!SECURITY_CONFIG.auditLoggingEnabled) {
+    return null; // Skip if audit logging is disabled
+  }
+
   const timestamp = new Date().toISOString();
   const logEntry = {
     timestamp,
@@ -94,8 +101,12 @@ export function createAuditLog(entry) {
   };
 
   // Append to audit log file
-  const logLine = JSON.stringify(logEntry) + '\n';
-  fs.appendFileSync(SECURITY_CONFIG.auditLogPath, logLine);
+  try {
+    const logLine = JSON.stringify(logEntry) + '\n';
+    fs.appendFileSync(SECURITY_CONFIG.auditLogPath, logLine);
+  } catch (err) {
+    // Failed to write audit log, continue anyway
+  }
 
   return logEntry;
 }
@@ -320,6 +331,10 @@ export function checkRateLimit(identifier, limit = 100, windowMs = 60000) {
  * Clean up old audit logs
  */
 export function cleanupAuditLogs(daysToKeep = 30) {
+  if (!SECURITY_CONFIG.auditLoggingEnabled) {
+    return; // Skip if audit logging is disabled
+  }
+
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
 
@@ -327,6 +342,8 @@ export function cleanupAuditLogs(daysToKeep = 30) {
   const tempPath = auditLogPath + '.tmp';
 
   try {
+    if (!fs.existsSync(auditLogPath)) return;
+
     const input = fs.readFileSync(auditLogPath, 'utf8');
     const lines = input.split('\n').filter(line => {
       if (!line.trim()) return false;

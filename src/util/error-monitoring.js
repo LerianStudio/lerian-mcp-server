@@ -8,7 +8,7 @@
  */
 
 import { performance } from 'perf_hooks';
-import { writeFileSync, existsSync, mkdirSync } from 'fs';
+import { writeFileSync, existsSync, mkdirSync, statSync, renameSync, readdirSync, unlinkSync } from 'fs';
 import { join } from 'path';
 
 /**
@@ -37,10 +37,11 @@ export const PerformanceThresholds = {
 export class ErrorMonitor {
     constructor(options = {}) {
         this.enabled = options.enabled !== false;
-        this.logToFile = options.logToFile !== false;
+        this.logToFile = options.logToFile === true; // Changed to opt-in
         this.logDirectory = options.logDirectory || './logs';
         this.maxLogFiles = options.maxLogFiles || 10;
-        this.performanceTracking = options.performanceTracking !== false;
+        this.maxLogSize = options.maxLogSize || 10 * 1024 * 1024; // 10MB default
+        this.performanceTracking = options.performanceTracking === true; // Changed to opt-in
 
         // Initialize metrics
         this.metrics = {
@@ -55,6 +56,11 @@ export class ErrorMonitor {
         // Ensure log directory exists
         if (this.logToFile && !existsSync(this.logDirectory)) {
             mkdirSync(this.logDirectory, { recursive: true });
+        }
+
+        // Cleanup old logs on startup
+        if (this.logToFile) {
+            this.cleanupOldLogs();
         }
 
         // Setup global error handlers
@@ -293,11 +299,69 @@ export class ErrorMonitor {
         }
     }
 
+    /**
+     * Rotate log file if it exceeds max size
+     */
+    rotateLogFile(logFile) {
+        try {
+            if (!existsSync(logFile)) return;
+
+            const stats = statSync(logFile);
+            if (stats.size < this.maxLogSize) return;
+
+            // Rotate existing logs (keep only maxLogFiles)
+            for (let i = this.maxLogFiles - 1; i > 0; i--) {
+                const oldFile = `${logFile}.${i}`;
+                const newFile = `${logFile}.${i + 1}`;
+                if (existsSync(oldFile)) {
+                    if (i === this.maxLogFiles - 1) {
+                        unlinkSync(oldFile); // Remove oldest
+                    } else {
+                        renameSync(oldFile, newFile);
+                    }
+                }
+            }
+
+            // Rotate current file
+            renameSync(logFile, `${logFile}.1`);
+        } catch (err) {
+            // Rotation failed, continue anyway
+        }
+    }
+
+    /**
+     * Clean up old log files
+     */
+    cleanupOldLogs(daysToKeep = 7) {
+        try {
+            if (!existsSync(this.logDirectory)) return;
+
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+
+            const files = readdirSync(this.logDirectory);
+            for (const file of files) {
+                const filePath = join(this.logDirectory, file);
+                try {
+                    const stats = statSync(filePath);
+                    if (stats.mtime < cutoffDate) {
+                        unlinkSync(filePath);
+                    }
+                } catch {
+                    // Skip files we can't access
+                }
+            }
+        } catch {
+            // Cleanup failed, continue anyway
+        }
+    }
+
     logToFileSystem(errorEntry) {
         const logFile = join(this.logDirectory, `errors-${new Date().toISOString().split('T')[0]}.log`);
         const logLine = JSON.stringify(errorEntry) + '\n';
 
         try {
+            this.rotateLogFile(logFile);
             writeFileSync(logFile, logLine, { flag: 'a' });
         } catch (err) {
             console.error('Failed to write error log to file:', err.message);
@@ -309,6 +373,7 @@ export class ErrorMonitor {
         const logLine = JSON.stringify(performanceEntry) + '\n';
 
         try {
+            this.rotateLogFile(logFile);
             writeFileSync(logFile, logLine, { flag: 'a' });
         } catch (err) {
             console.error('Failed to write performance log to file:', err.message);
@@ -321,8 +386,8 @@ export class ErrorMonitor {
  */
 export const globalErrorMonitor = new ErrorMonitor({
     enabled: process.env.NODE_ENV !== 'test',
-    logToFile: process.env.ERROR_LOGGING !== 'false',
-    performanceTracking: process.env.PERFORMANCE_TRACKING !== 'false'
+    logToFile: process.env.ERROR_LOGGING === 'true', // Opt-in: set to 'true' to enable
+    performanceTracking: process.env.PERFORMANCE_TRACKING === 'true' // Opt-in: set to 'true' to enable
 });
 
 /**

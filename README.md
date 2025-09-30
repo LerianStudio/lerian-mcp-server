@@ -201,6 +201,41 @@ Once connected, you can ask your AI assistant:
 - ✅ All data stays on your computer
 - ✅ Open source and auditable
 
+## ⚙️ Configuration
+
+### Environment Variables
+
+Configure the server behavior with these optional environment variables:
+
+**Logging Configuration:**
+- `ERROR_LOGGING=true` - Enable error logging to files (default: disabled)
+- `PERFORMANCE_TRACKING=true` - Enable performance tracking logs (default: disabled)
+- `AUDIT_LOGGING=true` - Enable security audit logging (default: disabled)
+
+**Note:** All logging is **disabled by default** to prevent log file growth. Enable only if needed for debugging or monitoring.
+
+**Example Claude Desktop configuration with logging:**
+```json
+{
+  "mcpServers": {
+    "lerian": {
+      "command": "npx",
+      "args": ["@lerianstudio/lerian-mcp-server@latest"],
+      "env": {
+        "ERROR_LOGGING": "true",
+        "PERFORMANCE_TRACKING": "true"
+      }
+    }
+  }
+}
+```
+
+**Log Management:**
+- Log files are stored in `./logs/` directory
+- Automatic rotation when files exceed 10MB
+- Old logs are cleaned up after 7 days
+- Manual cleanup: delete the `logs/` directory
+
 ## 🛠️ Development & Contributing
 
 ### **Quick Start for Developers**
