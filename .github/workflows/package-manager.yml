@@ -22,7 +22,7 @@ jobs:
       version: ${{ steps.get_version.outputs.version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Get version
         id: get_version
@@ -53,10 +53,10 @@ jobs:
     needs: validate-release
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "18"
           registry-url: "https://registry.npmjs.org"
@@ -121,10 +121,10 @@ jobs:
     needs: validate-release
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "18"
           registry-url: "https://npm.pkg.github.com"
@@ -161,7 +161,7 @@ jobs:
     if: github.event_name == 'release'
     steps:
       - name: Update release notes
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const version = '${{ needs.validate-release.outputs.version }}';
