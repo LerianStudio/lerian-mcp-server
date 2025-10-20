@@ -14,7 +14,7 @@ export interface CacheOptions {
 /**
  * Generic LRU cache wrapper
  */
-export class Cache<K, V> {
+export class Cache<K extends {}, V extends {}> {
   private cache: LRUCache<K, V>;
   private hits: number = 0;
   private misses: number = 0;
@@ -128,7 +128,7 @@ export class Cache<K, V> {
 /**
  * Create a cache instance with default settings
  */
-export function createCache<K, V>(options?: CacheOptions): Cache<K, V> {
+export function createCache<K extends {}, V extends {}>(options?: CacheOptions): Cache<K, V> {
   return new Cache<K, V>(options);
 }
 

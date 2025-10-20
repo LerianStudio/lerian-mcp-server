@@ -131,7 +131,7 @@ export class ErrorMonitor {
     /**
      * Log an error with enhanced context
      */
-    logError(error, severity = ErrorSeverity.MEDIUM, context = {}) {
+    logError(error: Error | any, severity: ErrorSeverityType = ErrorSeverity.MEDIUM, context: ErrorContext = {}) {
         if (!this.enabled) return;
 
         const errorEntry = {
@@ -162,7 +162,7 @@ export class ErrorMonitor {
     /**
      * Track operation performance
      */
-    startPerformanceTracking(operationName, context = {}) {
+    startPerformanceTracking(operationName: string, context: ErrorContext = {}): PerformanceTracker | null {
         if (!this.enabled || !this.performanceTracking) return null;
 
         const trackingId = this.generateId();
@@ -182,7 +182,7 @@ export class ErrorMonitor {
     /**
      * End performance tracking and log results
      */
-    endPerformanceTracking(trackingId, operationName, startTime, context) {
+    endPerformanceTracking(trackingId: string, operationName: string, startTime: number, context: ErrorContext): PerformanceEntry | undefined {
         if (!this.enabled || !this.performanceTracking) return;
 
         const endTime = performance.now();
@@ -222,7 +222,7 @@ export class ErrorMonitor {
     /**
      * Categorize performance based on duration
      */
-    categorizePerformance(duration) {
+    categorizePerformance(duration: number): PerformanceLevelType {
         if (duration <= PerformanceThresholds.FAST) return 'fast';
         if (duration <= PerformanceThresholds.NORMAL) return 'normal';
         if (duration <= PerformanceThresholds.SLOW) return 'slow';
@@ -287,13 +287,13 @@ export class ErrorMonitor {
         return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     }
 
-    getErrorCountBySeverity(severity) {
+    getErrorCountBySeverity(severity: ErrorSeverityType): number {
         return Array.from(this.metrics.errors.entries())
             .filter(([key]) => key.startsWith(severity))
             .reduce((sum, [, count]) => sum + count, 0);
     }
 
-    getPerformanceCountByLevel(level) {
+    getPerformanceCountByLevel(level: PerformanceLevelType): number {
         return Array.from(this.metrics.performance.entries())
             .filter(([key]) => key.endsWith(level))
             .reduce((sum, [, count]) => sum + count, 0);
@@ -308,7 +308,7 @@ export class ErrorMonitor {
         return Math.round(average * 100) / 100; // Round to 2 decimal places
     }
 
-    formatUptime(milliseconds) {
+    formatUptime(milliseconds: number): string {
         const seconds = Math.floor(milliseconds / 1000);
         const minutes = Math.floor(seconds / 60);
         const hours = Math.floor(minutes / 60);
@@ -320,7 +320,7 @@ export class ErrorMonitor {
         return `${seconds}s`;
     }
 
-    logToConsole(errorEntry) {
+    logToConsole(errorEntry: ErrorEntry): void {
         const colors = {
             [ErrorSeverity.LOW]: '\x1b[36m',      // Cyan
             [ErrorSeverity.MEDIUM]: '\x1b[33m',   // Yellow
@@ -341,7 +341,7 @@ export class ErrorMonitor {
     /**
      * Rotate log file if it exceeds max size
      */
-    rotateLogFile(logFile) {
+    rotateLogFile(logFile: string): void {
         try {
             if (!existsSync(logFile)) return;
 
@@ -395,7 +395,7 @@ export class ErrorMonitor {
         }
     }
 
-    logToFileSystem(errorEntry) {
+    logToFileSystem(errorEntry: ErrorEntry): void {
         const logFile = join(this.logDirectory, `errors-${new Date().toISOString().split('T')[0]}.log`);
         const logLine = JSON.stringify(errorEntry) + '\n';
 
@@ -403,11 +403,11 @@ export class ErrorMonitor {
             this.rotateLogFile(logFile);
             writeFileSync(logFile, logLine, { flag: 'a' });
         } catch (err) {
-            console.error('Failed to write error log to file:', err.message);
+            console.error('Failed to write error log to file:', err instanceof Error ? err.message : String(err));
         }
     }
 
-    logPerformanceToFile(performanceEntry) {
+    logPerformanceToFile(performanceEntry: PerformanceEntry): void {
         const logFile = join(this.logDirectory, `performance-${new Date().toISOString().split('T')[0]}.log`);
         const logLine = JSON.stringify(performanceEntry) + '\n';
 
@@ -415,7 +415,7 @@ export class ErrorMonitor {
             this.rotateLogFile(logFile);
             writeFileSync(logFile, logLine, { flag: 'a' });
         } catch (err) {
-            console.error('Failed to write performance log to file:', err.message);
+            console.error('Failed to write performance log to file:', err instanceof Error ? err.message : String(err));
         }
     }
 }
@@ -432,7 +432,7 @@ export const globalErrorMonitor = new ErrorMonitor({
 /**
  * Convenience function for tracking async operations
  */
-export async function trackAsyncOperation(operationName, asyncFunction, context = {}) {
+export async function trackAsyncOperation<T>(operationName: string, asyncFunction: () => Promise<T>, context: ErrorContext = {}): Promise<T> {
     const tracker = globalErrorMonitor.startPerformanceTracking(operationName, context);
 
     try {
@@ -452,7 +452,7 @@ export async function trackAsyncOperation(operationName, asyncFunction, context 
 /**
  * Convenience function for tracking sync operations
  */
-export function trackSyncOperation(operationName, syncFunction, context = {}) {
+export function trackSyncOperation<T>(operationName: string, syncFunction: () => T, context: ErrorContext = {}): T {
     const tracker = globalErrorMonitor.startPerformanceTracking(operationName, context);
 
     try {
@@ -469,4 +469,4 @@ export function trackSyncOperation(operationName, syncFunction, context = {}) {
     }
 }
 
-export default ErrorMonitor;    
+export default ErrorMonitor;                                                                                                                        
