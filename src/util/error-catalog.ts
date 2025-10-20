@@ -34,7 +34,7 @@ export class UserFriendlyError extends Error {
     let output = `❌ ${this.message}\n\n`;
 
     if (this.causes.length > 0) {
-      output += `💡 Possible causes:\n`;
+      output += '💡 Possible causes:\n';
       this.causes.forEach((cause, i) => {
         output += `   ${i + 1}. ${cause}\n`;
       });
@@ -42,7 +42,7 @@ export class UserFriendlyError extends Error {
     }
 
     if (this.solutions.length > 0) {
-      output += `🔧 How to fix:\n`;
+      output += '🔧 How to fix:\n';
       this.solutions.forEach((solution, i) => {
         output += `   ${i + 1}. ${solution}\n`;
       });

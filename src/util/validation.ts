@@ -49,7 +49,7 @@ export const commonSchemas = {
 /**
  * Create a list operation schema
  */
-export function createListSchema(resourceName: string) {
+export function createListSchema(_resourceName: string) {
   return z.object({
     organization_id: commonSchemas.organizationId,
     ledger_id: commonSchemas.ledgerId.optional(),

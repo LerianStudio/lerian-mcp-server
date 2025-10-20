@@ -98,7 +98,7 @@ export class Cache<K extends {}, V extends {}> {
     hitRate: number;
     size: number;
     maxSize: number;
-  } {
+    } {
     return {
       hits: this.hits,
       misses: this.misses,
@@ -157,7 +157,7 @@ export function getAllCacheStats(): {
   document: ReturnType<Cache<any, any>['getStats']>;
   manifest: ReturnType<Cache<any, any>['getStats']>;
   apiResponse: ReturnType<Cache<any, any>['getStats']>;
-} {
+  } {
   return {
     document: documentCache.getStats(),
     manifest: manifestCache.getStats(),

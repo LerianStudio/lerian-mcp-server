@@ -124,7 +124,7 @@ export function createAuditLog(entry: Record<string, any>): AuditLog | null {
   try {
     const logLine = JSON.stringify(logEntry) + '\n';
     fs.appendFileSync(SECURITY_CONFIG.auditLogPath, logLine);
-  } catch (err) {
+  } catch {
     // Failed to write audit log, continue anyway
   }
 
@@ -290,7 +290,7 @@ function validateConfigSecurity(config: any): void {
 
   // Ensure backend URLs are localhost only
   if (config.backend) {
-    for (const [service, url] of Object.entries(config.backend)) {
+    for (const url of Object.values(config.backend)) {
       if (typeof url === 'string' && !url.includes('localhost') && !url.includes('127.0.0.1')) {
         // Warning: Backend service not localhost (silent for MCP protocol)
       }
@@ -388,7 +388,7 @@ export function cleanupAuditLogs(daysToKeep: number = 30): void {
 
     fs.writeFileSync(tempPath, lines.join('\n') + '\n');
     fs.renameSync(tempPath, auditLogPath);
-  } catch (error) {
+  } catch {
     // Failed to cleanup audit logs (silent for MCP protocol)
   }
 }
