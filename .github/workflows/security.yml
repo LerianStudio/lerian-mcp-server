@@ -74,7 +74,7 @@ jobs:
           
       - name: Upload Semgrep results
         if: github.event.inputs.audit_level == 'comprehensive'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: semgrep-results
           path: semgrep-results.json
@@ -82,7 +82,7 @@ jobs:
 
       - name: Upload security reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: security-reports
           path: security-reports/
