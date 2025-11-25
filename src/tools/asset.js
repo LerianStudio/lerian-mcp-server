@@ -1,11 +1,13 @@
 import { z } from "zod";
 import api from "../util/api.js";
 import config from "../config.js";
-import { 
-    createPaginatedResponse, 
-    wrapToolHandler, 
+import {
+    createPaginatedResponse,
+    wrapToolHandler,
     validateArgs,
-    logToolInvocation 
+    logToolInvocation,
+    createErrorResponse,
+    ErrorCodes
 } from "../util/mcp-helpers.js";
 
 // Sample data for when real API is not available
@@ -80,38 +82,40 @@ export const registerAssetTools = (server) => {
                 code: z.string().optional()
             }));
 
-            // Filter sample data based on the query parameters
-            let assets = [...sampleAssets];
-
-            if (validatedArgs.type) {
-                assets = assets.filter(asset => asset.type === validatedArgs.type);
+            // Fail-closed: refuse to return stub data
+            if (config.useStubs) {
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    'Financial data unavailable: Server is running in stub mode. Connect to real backend services to access financial data.'
+                );
             }
 
-            if (validatedArgs.code) {
-                assets = assets.filter(asset => asset.code.includes(validatedArgs.code));
-            }
-
-            // Only attempt real API call if stubs are disabled
-            if (!config.useStubs) {
-                try {
-                    const response = await api.assets.list(validatedArgs.organization_id, validatedArgs.ledger_id, {
-                        limit: validatedArgs.limit,
-                        sort_order: validatedArgs.sort_order,
-                        metadata: validatedArgs.metadata,
-                        type: validatedArgs.type,
-                        code: validatedArgs.code
-                    });
-                    if (response && response.items) {
-                        assets = response.items;
-                    }
-                } catch (error) {
-                    console.error(`Error fetching assets for ledger ${validatedArgs.ledger_id}: ${error.message}`);
-                    // Fall back to sample data
+            try {
+                const response = await api.assets.list(validatedArgs.organization_id, validatedArgs.ledger_id, {
+                    limit: validatedArgs.limit,
+                    sort_order: validatedArgs.sort_order,
+                    metadata: validatedArgs.metadata,
+                    type: validatedArgs.type,
+                    code: validatedArgs.code
+                });
+                if (!response || !response.items) {
+                    throw new Error('Backend service returned empty response');
                 }
-            }
 
-            // Return paginated response
-            return createPaginatedResponse(assets, validatedArgs);
+                const metadata = {
+                    isStub: false,
+                    dataSource: 'api',
+                    timestamp: new Date().toISOString()
+                };
+
+                return createPaginatedResponse(response.items, validatedArgs, metadata);
+            } catch (error) {
+                // Fail-closed: refuse to return stub data
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    `Financial data unavailable: ${error.message}. Backend service may be down.`
+                );
+            }
         })
     );
 
@@ -132,36 +136,32 @@ export const registerAssetTools = (server) => {
                 id: z.string().uuid()
             }));
 
-            // Find asset in sample data
-            const asset = sampleAssets.find(a => a.id === id) || {
-                ...sampleAssets[0],
-                id
-            };
-
-            let assetData = {
-                ...asset,
-                organization_id,
-                ledger_id
-            };
-
-            // Only attempt real API call if stubs are disabled
-            if (!config.useStubs) {
-                try {
-                    const response = await api.assets.get(organization_id, ledger_id, id);
-                    if (response) {
-                        assetData = {
-                            ...response,
-                            organization_id,
-                            ledger_id
-                        };
-                    }
-                } catch (error) {
-                    console.error(`Error fetching asset ${id}: ${error.message}`);
-                    // Fall back to sample data
-                }
+            // Fail-closed: refuse to return stub data
+            if (config.useStubs) {
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    'Financial data unavailable: Server is running in stub mode. Connect to real backend services to access financial data.'
+                );
             }
 
-            return assetData;
+            try {
+                const response = await api.assets.get(organization_id, ledger_id, id);
+                if (!response) {
+                    throw new Error('Backend service returned empty response');
+                }
+
+                return {
+                    ...response,
+                    organization_id,
+                    ledger_id
+                };
+            } catch (error) {
+                // Fail-closed: refuse to return stub data
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    `Financial data unavailable: ${error.message}. Backend service may be down.`
+                );
+            }
         })
     );
 }; 

@@ -1,6 +1,11 @@
 import tseslint from '@typescript-eslint/eslint-plugin';
 import tsparser from '@typescript-eslint/parser';
 
+// TODO(ISSUES.md:COS-002): Consider adding 'quotes' rule for consistent quote style
+// TODO(ISSUES.md:COS-003): Add 'comma-dangle' rule for trailing comma consistency
+// TODO(ISSUES.md:COS-004): Add 'no-console' rule to prevent console.log in production code
+// See COSMETIC_IMPROVEMENTS.md for full implementation plan
+
 export default [
     {
         ignores: ['dist/**/*', 'node_modules/**/*', '**/*.d.ts']

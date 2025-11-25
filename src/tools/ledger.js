@@ -1,11 +1,13 @@
 import { z } from "zod";
 import api from "../util/api.js";
 import config from "../config.js";
-import { 
-    createPaginatedResponse, 
-    wrapToolHandler, 
+import {
+    createPaginatedResponse,
+    wrapToolHandler,
     validateArgs,
-    logToolInvocation 
+    logToolInvocation,
+    createErrorResponse,
+    ErrorCodes
 } from "../util/mcp-helpers.js";
 
 // Sample data for when real API is not available
@@ -76,29 +78,40 @@ export const registerLedgerTools = (server) => {
                 metadata: z.string().optional()
             }));
 
-            let ledgers = sampleLedgers;
-
-            // Only attempt real API call if stubs are disabled
-            if (!config.useStubs) {
-                try {
-                    const response = await api.ledgers.list(validatedArgs.organization_id, {
-                        limit: validatedArgs.limit,
-                        start_date: validatedArgs.start_date,
-                        end_date: validatedArgs.end_date,
-                        sort_order: validatedArgs.sort_order,
-                        metadata: validatedArgs.metadata
-                    });
-                    if (response && response.items) {
-                        ledgers = response.items;
-                    }
-                } catch (error) {
-                    console.error(`Error fetching ledgers for organization ${validatedArgs.organization_id}: ${error.message}`);
-                    // Fall back to sample data
-                }
+            // Fail-closed: refuse to return stub data
+            if (config.useStubs) {
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    'Financial data unavailable: Server is running in stub mode. Connect to real backend services to access financial data.'
+                );
             }
 
-            // Return paginated response
-            return createPaginatedResponse(ledgers, validatedArgs);
+            try {
+                const response = await api.ledgers.list(validatedArgs.organization_id, {
+                    limit: validatedArgs.limit,
+                    start_date: validatedArgs.start_date,
+                    end_date: validatedArgs.end_date,
+                    sort_order: validatedArgs.sort_order,
+                    metadata: validatedArgs.metadata
+                });
+                if (!response || !response.items) {
+                    throw new Error('Backend service returned empty response');
+                }
+
+                const metadata = {
+                    isStub: false,
+                    dataSource: 'api',
+                    timestamp: new Date().toISOString()
+                };
+
+                return createPaginatedResponse(response.items, validatedArgs, metadata);
+            } catch (error) {
+                // Fail-closed: refuse to return stub data
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    `Financial data unavailable: ${error.message}. Backend service may be down.`
+                );
+            }
         })
     );
 
@@ -117,25 +130,31 @@ export const registerLedgerTools = (server) => {
                 id: z.string().uuid()
             }));
 
-            let ledgerData = { ...sampleLedgerDetails, id, organization_id };
-
-            // Only attempt real API call if stubs are disabled
-            if (!config.useStubs) {
-                try {
-                    const response = await api.ledgers.get(organization_id, id);
-                    if (response) {
-                        ledgerData = {
-                            ...response,
-                            organization_id
-                        };
-                    }
-                } catch (error) {
-                    console.error(`Error fetching ledger ${id}: ${error.message}`);
-                    // Fall back to sample data
-                }
+            // Fail-closed: refuse to return stub data
+            if (config.useStubs) {
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    'Financial data unavailable: Server is running in stub mode. Connect to real backend services to access financial data.'
+                );
             }
 
-            return ledgerData;
+            try {
+                const response = await api.ledgers.get(organization_id, id);
+                if (!response) {
+                    throw new Error('Backend service returned empty response');
+                }
+
+                return {
+                    ...response,
+                    organization_id
+                };
+            } catch (error) {
+                // Fail-closed: refuse to return stub data
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    `Financial data unavailable: ${error.message}. Backend service may be down.`
+                );
+            }
         })
     );
 }; 

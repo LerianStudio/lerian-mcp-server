@@ -19,7 +19,6 @@ export const registerDiscoveryPrompts = (server) => {
   server.prompt(
     "help-me-start",
     "Show me what I can do with this Lerian MCP server and how to get started quickly",
-    [],
     async () => {
       return {
         description: "Quick start guide with essential tools and common workflows for Lerian",
@@ -61,7 +60,6 @@ Organizations, Ledgers, Accounts, Transactions, Assets, Portfolios, Segments, Ba
   server.prompt(
     "help-with-api",
     "Show me how to use the Midaz API effectively with practical examples",
-    [],
     async () => {
       return {
         description: "Practical guide to Midaz API usage with examples and common workflows",
@@ -119,10 +117,10 @@ Ask me to use any specific tool with these parameters!`
   server.prompt(
     "help-me-learn",
     "Get personalized learning guidance for Midaz based on your role and experience",
-    z.object({
+    {
       role: z.enum(["developer", "admin", "business", "explorer"]).optional().describe("Your primary role (developer, admin, business, explorer)"),
       experience: z.enum(["beginner", "intermediate", "advanced"]).optional().describe("Your experience level (beginner, intermediate, advanced)")
-    }),
+    },
     async (args) => {
       const role = args.role || "developer";
       const experience = args.experience || "beginner";

@@ -10,6 +10,7 @@ import { initializeSecurity } from './util/security.js';
 import { initializeManifest } from './util/docs-manifest.js';
 import { initializeMcpLogger, createLogger, logLifecycleEvent, logConfigEvent, logLoggingConfig } from './util/mcp-logging.js';
 import { globalErrorMonitor, trackAsyncOperation, ErrorSeverity } from './util/error-monitoring.js';
+import { initializeSecrets, displaySecretsInfo } from './util/secret-manager.js';
 
 // Import unified tools (consolidates 17 tools into 2)
 import { registerUnifiedDocumentationTool } from './tools/docs-unified.js';
@@ -49,6 +50,10 @@ import { initializeClientDetection } from './util/client-integration.js';
  */
 const main = async () => {
   return await trackAsyncOperation('server_startup', async () => {
+    // Initialize cryptographic secrets (auto-generate if not set)
+    const secretsInfo = initializeSecrets();
+    logConfigEvent('secrets_initialized', { source: secretsInfo.source });
+
     // Initialize silently - no console output until after MCP connection
     initializeSecurity();
     logConfigEvent('security_initialized');
@@ -80,11 +85,11 @@ const main = async () => {
       logging: true
     };
 
-    // Create the MCP server with declared capabilities
+    // Create the MCP server
+    // Note: Capabilities are declared via tools/prompts/resources registration, not constructor
     const server = new McpServer({
       name: 'lerian-mcp-server',
-      version: '2.27.1',
-      capabilities
+      version: '2.27.1'
     });
 
     // Initialize MCP logger
@@ -305,6 +310,9 @@ const main = async () => {
       timestamp: new Date().toISOString()
     });
     logger.info('Server ready to accept requests');
+
+    // Display secrets information (writes to stderr, safe for MCP)
+    displaySecretsInfo();
   }, {
     version: '2.27.0',
     transport: 'stdio'

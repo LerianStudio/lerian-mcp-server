@@ -1,11 +1,13 @@
 import { z } from "zod";
 import api from "../util/api.js";
 import config from "../config.js";
-import { 
-    createPaginatedResponse, 
-    wrapToolHandler, 
+import {
+    createPaginatedResponse,
+    wrapToolHandler,
     validateArgs,
-    logToolInvocation 
+    logToolInvocation,
+    createErrorResponse,
+    ErrorCodes
 } from "../util/mcp-helpers.js";
 
 // Sample data for when real API is not available
@@ -66,35 +68,39 @@ export const registerPortfolioTools = (server) => {
                 status: z.string().optional()
             }));
 
-            // Filter sample data based on the query parameters
-            let portfolios = [...samplePortfolios];
-
-            if (validatedArgs.status) {
-                portfolios = portfolios.filter(
-                    portfolio => portfolio.status && portfolio.status.code === validatedArgs.status
+            // Fail-closed: refuse to return stub data
+            if (config.useStubs) {
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    'Financial data unavailable: Server is running in stub mode. Connect to real backend services to access financial data.'
                 );
             }
 
-            // Only attempt real API call if stubs are disabled
-            if (!config.useStubs) {
-                try {
-                    const response = await api.portfolios.list(validatedArgs.organization_id, validatedArgs.ledger_id, {
-                        limit: validatedArgs.limit,
-                        sort_order: validatedArgs.sort_order,
-                        metadata: validatedArgs.metadata,
-                        status: validatedArgs.status
-                    });
-                    if (response && response.items) {
-                        portfolios = response.items;
-                    }
-                } catch (error) {
-                    console.error(`Error fetching portfolios for ledger ${validatedArgs.ledger_id}: ${error.message}`);
-                    // Fall back to sample data
+            try {
+                const response = await api.portfolios.list(validatedArgs.organization_id, validatedArgs.ledger_id, {
+                    limit: validatedArgs.limit,
+                    sort_order: validatedArgs.sort_order,
+                    metadata: validatedArgs.metadata,
+                    status: validatedArgs.status
+                });
+                if (!response || !response.items) {
+                    throw new Error('Backend service returned empty response');
                 }
-            }
 
-            // Return paginated response
-            return createPaginatedResponse(portfolios, validatedArgs);
+                const metadata = {
+                    isStub: false,
+                    dataSource: 'api',
+                    timestamp: new Date().toISOString()
+                };
+
+                return createPaginatedResponse(response.items, validatedArgs, metadata);
+            } catch (error) {
+                // Fail-closed: refuse to return stub data
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    `Financial data unavailable: ${error.message}. Backend service may be down.`
+                );
+            }
         })
     );
 
@@ -115,36 +121,32 @@ export const registerPortfolioTools = (server) => {
                 id: z.string().uuid()
             }));
 
-            // Find portfolio in sample data
-            const portfolio = samplePortfolios.find(p => p.id === id) || {
-                ...samplePortfolios[0],
-                id
-            };
-
-            let portfolioData = {
-                ...portfolio,
-                organization_id,
-                ledger_id
-            };
-
-            // Only attempt real API call if stubs are disabled
-            if (!config.useStubs) {
-                try {
-                    const response = await api.portfolios.get(organization_id, ledger_id, id);
-                    if (response) {
-                        portfolioData = {
-                            ...response,
-                            organization_id,
-                            ledger_id
-                        };
-                    }
-                } catch (error) {
-                    console.error(`Error fetching portfolio ${id}: ${error.message}`);
-                    // Fall back to sample data
-                }
+            // Fail-closed: refuse to return stub data
+            if (config.useStubs) {
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    'Financial data unavailable: Server is running in stub mode. Connect to real backend services to access financial data.'
+                );
             }
 
-            return portfolioData;
+            try {
+                const response = await api.portfolios.get(organization_id, ledger_id, id);
+                if (!response) {
+                    throw new Error('Backend service returned empty response');
+                }
+
+                return {
+                    ...response,
+                    organization_id,
+                    ledger_id
+                };
+            } catch (error) {
+                // Fail-closed: refuse to return stub data
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    `Financial data unavailable: ${error.message}. Backend service may be down.`
+                );
+            }
         })
     );
 }; 

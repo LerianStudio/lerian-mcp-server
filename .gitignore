@@ -12,6 +12,9 @@ build/
 .env.local
 .env.*.local
 
+# Auto-generated secrets (user-specific, should not be committed)
+.lerian/
+
 # Midaz MCP Config JSON
 midaz-mcp-config.json
 

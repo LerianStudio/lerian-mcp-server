@@ -1,7 +1,7 @@
 # Midaz MCP Server - Makefile
 # Automates setup, configuration, and running of the MCP server
 
-.PHONY: help setup build start dev test lint clean install demo validate docs docs-serve docs-clean typecheck audit ci-install ci-lint ci-test ci-audit ci-all
+.PHONY: help setup build start dev test test-security secrets secrets-status lint clean install demo validate docs docs-serve docs-clean typecheck audit ci-install ci-lint ci-test ci-audit ci-all
 
 # Default target
 help:
@@ -18,11 +18,16 @@ help:
 	@echo "  start           Start MCP server (production mode)"
 	@echo "  dev             Start MCP server (development mode)"
 	@echo "  test            Run all tests"
+	@echo "  test-security   Run security test suite (CRT/MED/LOW fixes)"
 	@echo "  test-logging    Test logging functionality"
 	@echo "  lint            Run ESLint"
 	@echo "  lint-fix        Run ESLint with auto-fix"
 	@echo "  typecheck       Run TypeScript type checking"
 	@echo "  audit           Run npm security audit"
+	@echo ""
+	@echo "🔐 Security:"
+	@echo "  secrets         Generate CURSOR_SECRET and CACHE_ENCRYPTION_KEY"
+	@echo "  secrets-status  Check secrets configuration status"
 	@echo ""
 	@echo "📚 Documentation:"
 	@echo "  docs            Generate TypeDoc API documentation"
@@ -96,6 +101,18 @@ test:
 	@echo "🧪 Running tests..."
 	npm run test
 
+# Run security test suite
+test-security:
+	@echo "🔒 Running security test suite..."
+	@echo "📝 Tests cover: CRT-001 through CRT-008, MED-005, LOW-002, LOW-005"
+	@if [ -f test/security-fixes.test.js ]; then \
+		node test/security-fixes.test.js; \
+	else \
+		echo "⚠️  Security test suite not found at test/security-fixes.test.js"; \
+		echo "   Run basic tests instead..."; \
+		npm test; \
+	fi
+
 # Test logging functionality
 test-logging:
 	@echo "🔍 Testing logging functionality..."
@@ -120,6 +137,43 @@ typecheck:
 audit:
 	@echo "🔒 Running npm security audit..."
 	npm run audit
+
+# Generate cryptographic secrets
+secrets:
+	@echo "🔐 Generating cryptographic secrets..."
+	@echo ""
+	@echo "CURSOR_SECRET (for HMAC-signed pagination cursors):"
+	@node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+	@echo ""
+	@echo "CACHE_ENCRYPTION_KEY (for encrypted caching):"
+	@node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+	@echo ""
+	@echo "📝 Add these to your .env file or set as environment variables"
+	@echo "💡 Or let the server auto-generate and persist them to ~/.lerian/secrets.json"
+
+# Check secrets configuration status
+secrets-status:
+	@echo "🔐 Checking secrets configuration..."
+	@echo ""
+	@if [ -n "$$CURSOR_SECRET" ]; then \
+		echo "✅ CURSOR_SECRET set via environment variable"; \
+	elif [ -f ~/.lerian/secrets.json ]; then \
+		echo "✅ CURSOR_SECRET auto-generated at ~/.lerian/secrets.json"; \
+	else \
+		echo "⚠️  CURSOR_SECRET not set (will auto-generate on first run)"; \
+	fi
+	@if [ -n "$$CACHE_ENCRYPTION_KEY" ]; then \
+		echo "✅ CACHE_ENCRYPTION_KEY set via environment variable"; \
+	elif [ -f ~/.lerian/secrets.json ]; then \
+		echo "✅ CACHE_ENCRYPTION_KEY auto-generated at ~/.lerian/secrets.json"; \
+	else \
+		echo "⚠️  CACHE_ENCRYPTION_KEY not set (will auto-generate on first run)"; \
+	fi
+	@echo ""
+	@if [ -f ~/.lerian/secrets.json ]; then \
+		echo "📁 Secrets file: ~/.lerian/secrets.json"; \
+		echo "🔒 Permissions: $$(ls -l ~/.lerian/secrets.json | awk '{print $$1}')"; \
+	fi
 
 
 # Maintenance

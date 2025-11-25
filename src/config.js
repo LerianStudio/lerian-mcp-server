@@ -268,7 +268,8 @@ async function loadConfig() {
                 // Validate configuration
                 const validation = validateConfig(loadedConfig);
                 if (!validation.success) {
-                    throw new Error(`Invalid configuration: ${validation.errors.join(', ')}`);
+                    const errorMessages = validation.errors.map(err => `${err.path}: ${err.message}`).join('; ');
+                    throw new Error(`Invalid configuration: ${errorMessages}`);
                 }
 
                 configSource = argsConfig._configFile;
@@ -368,7 +369,8 @@ async function loadConfig() {
                     // Validate configuration
                     const validation = validateConfig(loadedConfig);
                     if (!validation.success) {
-                        throw new Error(`Invalid configuration: ${validation.errors.join(', ')}`);
+                        const errorMessages = validation.errors.map(err => `${err.path}: ${err.message}`).join('; ');
+                        throw new Error(`Invalid configuration: ${errorMessages}`);
                     }
 
                     configSource = configPath;
@@ -405,7 +407,8 @@ async function loadConfig() {
     // Validate final merged configuration
     const validation = validateConfig(loadedConfig);
     if (!validation.success) {
-        throw new Error(`Invalid configuration: ${validation.errors.join(', ')}`);
+        const errorMessages = validation.errors.map(err => `${err.path}: ${err.message}`).join('; ');
+        throw new Error(`Invalid configuration: ${errorMessages}`);
     }
 
     return loadedConfig;

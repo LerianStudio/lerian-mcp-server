@@ -8,7 +8,9 @@ import {
     createPaginatedResponse,
     wrapToolHandler,
     validateArgs,
-    logToolInvocation
+    logToolInvocation,
+    createErrorResponse,
+    ErrorCodes
 } from "../util/mcp-helpers.js";
 
 // Get package.json version info
@@ -93,34 +95,34 @@ export const registerOrganizationTools = (server) => {
                 limit: z.number().min(1).max(100).optional().default(10)
             }));
 
-            let organizations = sampleOrganizations;
-            let isUsingStubData = true;
-
-            // Only attempt real API call if stubs are disabled
-            if (!config.useStubs) {
-                try {
-                    const response = await api.organizations.list();
-                    if (response && response.items) {
-                        organizations = response.items;
-                        isUsingStubData = false;
-                    }
-                } catch (error) {
-                    console.error(`Error fetching organizations: ${error.message}`);
-                    // Fall back to sample data
-                }
+            // Fail-closed: refuse to return stub data
+            if (config.useStubs) {
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    'Financial data unavailable: Server is running in stub mode. Connect to real backend services to access financial data.'
+                );
             }
 
-            // Return paginated response with metadata indicating data source
-            const metadata = isUsingStubData ? {
-                isStub: true,
-                dataSource: 'stub',
-                reason: config.useStubs ? 'stubs_enabled' : 'backend_unavailable'
-            } : {
-                isStub: false,
-                dataSource: 'api'
-            };
+            try {
+                const response = await api.organizations.list();
+                if (!response || !response.items) {
+                    throw new Error('Backend service returned empty response');
+                }
 
-            return createPaginatedResponse(organizations, validatedArgs, metadata);
+                const metadata = {
+                    isStub: false,
+                    dataSource: 'api',
+                    timestamp: new Date().toISOString()
+                };
+
+                return createPaginatedResponse(response.items, validatedArgs, metadata);
+            } catch (error) {
+                // Fail-closed: refuse to return stub data
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    `Financial data unavailable: ${error.message}. Backend service may be down.`
+                );
+            }
         })
     );
 
@@ -137,22 +139,28 @@ export const registerOrganizationTools = (server) => {
                 id: z.string().uuid()
             }));
 
-            let organizationData = { ...sampleOrganizationDetails, id };
-
-            // Only attempt real API call if stubs are disabled
-            if (!config.useStubs) {
-                try {
-                    const response = await api.organizations.get(id);
-                    if (response) {
-                        organizationData = response;
-                    }
-                } catch (error) {
-                    console.error(`Error fetching organization ${id}: ${error.message}`);
-                    // Fall back to sample data
-                }
+            // Fail-closed: refuse to return stub data
+            if (config.useStubs) {
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    'Financial data unavailable: Server is running in stub mode. Connect to real backend services to access financial data.'
+                );
             }
 
-            return organizationData;
+            try {
+                const response = await api.organizations.get(id);
+                if (!response) {
+                    throw new Error('Backend service returned empty response');
+                }
+
+                return response;
+            } catch (error) {
+                // Fail-closed: refuse to return stub data
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    `Financial data unavailable: ${error.message}. Backend service may be down.`
+                );
+            }
         })
     );
 

@@ -1,11 +1,13 @@
 import { z } from "zod";
 import api from "../util/api.js";
 import config from "../config.js";
-import { 
-    createPaginatedResponse, 
-    wrapToolHandler, 
+import {
+    createPaginatedResponse,
+    wrapToolHandler,
     validateArgs,
-    logToolInvocation 
+    logToolInvocation,
+    createErrorResponse,
+    ErrorCodes
 } from "../util/mcp-helpers.js";
 
 // Sample data for when real API is not available
@@ -86,33 +88,33 @@ export const registerBalanceTools = (server) => {
                 account_id: z.string().uuid()
             }));
 
-            let balanceData = {
-                ...sampleBalance,
-                id: account_id,
-                organization_id,
-                ledger_id,
-                account_id
-            };
-
-            // Only attempt real API call if stubs are disabled
-            if (!config.useStubs) {
-                try {
-                    const response = await api.balances.getAccountBalance(organization_id, ledger_id, account_id);
-                    if (response) {
-                        balanceData = {
-                            ...response,
-                            organization_id,
-                            ledger_id,
-                            account_id
-                        };
-                    }
-                } catch (error) {
-                    console.error(`Error fetching balance for account ${account_id}: ${error.message}`);
-                    // Fall back to sample data
-                }
+            // Fail-closed: refuse to return stub data
+            if (config.useStubs) {
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    'Financial data unavailable: Server is running in stub mode. Connect to real backend services to access financial data.'
+                );
             }
 
-            return balanceData;
+            try {
+                const response = await api.balances.getAccountBalance(organization_id, ledger_id, account_id);
+                if (!response) {
+                    throw new Error('Backend service returned empty response');
+                }
+
+                return {
+                    ...response,
+                    organization_id,
+                    ledger_id,
+                    account_id
+                };
+            } catch (error) {
+                // Fail-closed: refuse to return stub data
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    `Financial data unavailable: ${error.message}. Backend service may be down.`
+                );
+            }
         })
     );
 }; 

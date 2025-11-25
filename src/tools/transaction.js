@@ -1,11 +1,13 @@
 import { z } from "zod";
 import api from "../util/api.js";
 import config from "../config.js";
-import { 
-    createPaginatedResponse, 
-    wrapToolHandler, 
+import {
+    createPaginatedResponse,
+    wrapToolHandler,
     validateArgs,
-    logToolInvocation 
+    logToolInvocation,
+    createErrorResponse,
+    ErrorCodes
 } from "../util/mcp-helpers.js";
 
 // Sample data for when real API is not available
@@ -170,31 +172,42 @@ export const registerTransactionTools = (server) => {
                 metadata: z.string().optional()
             }));
 
-            let transactions = sampleTransactions;
-
-            // Only attempt real API call if stubs are disabled
-            if (!config.useStubs) {
-                try {
-                    const response = await api.transactions.list(validatedArgs.organization_id, validatedArgs.ledger_id, {
-                        account_id: validatedArgs.account_id,
-                        limit: validatedArgs.limit,
-                        start_date: validatedArgs.start_date,
-                        end_date: validatedArgs.end_date,
-                        sort_order: validatedArgs.sort_order,
-                        cursor: validatedArgs.cursor,
-                        metadata: validatedArgs.metadata
-                    });
-                    if (response && response.items) {
-                        transactions = response.items;
-                    }
-                } catch (error) {
-                    console.error(`Error fetching transactions for ledger ${validatedArgs.ledger_id}: ${error.message}`);
-                    // Fall back to sample data
-                }
+            // Fail-closed: refuse to return stub data
+            if (config.useStubs) {
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    'Financial data unavailable: Server is running in stub mode. Connect to real backend services to access financial data.'
+                );
             }
 
-            // Return paginated response
-            return createPaginatedResponse(transactions, validatedArgs);
+            try {
+                const response = await api.transactions.list(validatedArgs.organization_id, validatedArgs.ledger_id, {
+                    account_id: validatedArgs.account_id,
+                    limit: validatedArgs.limit,
+                    start_date: validatedArgs.start_date,
+                    end_date: validatedArgs.end_date,
+                    sort_order: validatedArgs.sort_order,
+                    cursor: validatedArgs.cursor,
+                    metadata: validatedArgs.metadata
+                });
+                if (!response || !response.items) {
+                    throw new Error('Backend service returned empty response');
+                }
+
+                const metadata = {
+                    isStub: false,
+                    dataSource: 'api',
+                    timestamp: new Date().toISOString()
+                };
+
+                return createPaginatedResponse(response.items, validatedArgs, metadata);
+            } catch (error) {
+                // Fail-closed: refuse to return stub data
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    `Financial data unavailable: ${error.message}. Backend service may be down.`
+                );
+            }
         })
     );
 
@@ -215,26 +228,32 @@ export const registerTransactionTools = (server) => {
                 id: z.string().uuid()
             }));
 
-            let transactionData = { ...sampleTransactionDetails, id, organization_id, ledger_id };
-
-            // Only attempt real API call if stubs are disabled
-            if (!config.useStubs) {
-                try {
-                    const response = await api.transactions.get(organization_id, ledger_id, id);
-                    if (response) {
-                        transactionData = {
-                            ...response,
-                            organization_id,
-                            ledger_id
-                        };
-                    }
-                } catch (error) {
-                    console.error(`Error fetching transaction ${id}: ${error.message}`);
-                    // Fall back to sample data
-                }
+            // Fail-closed: refuse to return stub data
+            if (config.useStubs) {
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    'Financial data unavailable: Server is running in stub mode. Connect to real backend services to access financial data.'
+                );
             }
 
-            return transactionData;
+            try {
+                const response = await api.transactions.get(organization_id, ledger_id, id);
+                if (!response) {
+                    throw new Error('Backend service returned empty response');
+                }
+
+                return {
+                    ...response,
+                    organization_id,
+                    ledger_id
+                };
+            } catch (error) {
+                // Fail-closed: refuse to return stub data
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    `Financial data unavailable: ${error.message}. Backend service may be down.`
+                );
+            }
         })
     );
 
@@ -259,34 +278,41 @@ export const registerTransactionTools = (server) => {
                 limit: z.number().min(1).max(100).optional().default(10)
             }));
 
-            // Create sample operations for this account
-            let operations = sampleOperations.map(op => ({
-                ...op,
-                accountId: validatedArgs.account_id
-            }));
-
-            // Only attempt real API call if stubs are disabled
-            if (!config.useStubs) {
-                try {
-                    const response = await api.operations.list(
-                        validatedArgs.organization_id, 
-                        validatedArgs.ledger_id, 
-                        validatedArgs.account_id, {
-                            limit: validatedArgs.limit,
-                            cursor: validatedArgs.cursor
-                        }
-                    );
-                    if (response && response.items) {
-                        operations = response.items;
-                    }
-                } catch (error) {
-                    console.error(`Error fetching operations for account ${validatedArgs.account_id}: ${error.message}`);
-                    // Fall back to sample data
-                }
+            // Fail-closed: refuse to return stub data
+            if (config.useStubs) {
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    'Financial data unavailable: Server is running in stub mode. Connect to real backend services to access financial data.'
+                );
             }
 
-            // Return paginated response
-            return createPaginatedResponse(operations, validatedArgs);
+            try {
+                const response = await api.operations.list(
+                    validatedArgs.organization_id,
+                    validatedArgs.ledger_id,
+                    validatedArgs.account_id, {
+                        limit: validatedArgs.limit,
+                        cursor: validatedArgs.cursor
+                    }
+                );
+                if (!response || !response.items) {
+                    throw new Error('Backend service returned empty response');
+                }
+
+                const metadata = {
+                    isStub: false,
+                    dataSource: 'api',
+                    timestamp: new Date().toISOString()
+                };
+
+                return createPaginatedResponse(response.items, validatedArgs, metadata);
+            } catch (error) {
+                // Fail-closed: refuse to return stub data
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    `Financial data unavailable: ${error.message}. Backend service may be down.`
+                );
+            }
         })
     );
 
@@ -309,33 +335,33 @@ export const registerTransactionTools = (server) => {
                 account_id: z.string().uuid()
             }));
 
-            let operationData = {
-                ...sampleOperationDetails,
-                id: operation_id,
-                accountId: account_id,
-                organization_id,
-                ledger_id,
-            };
-
-            // Only attempt real API call if stubs are disabled
-            if (!config.useStubs) {
-                try {
-                    const response = await api.operations.get(organization_id, ledger_id, account_id, operation_id);
-                    if (response) {
-                        operationData = {
-                            ...response,
-                            organization_id,
-                            ledger_id,
-                            account_id
-                        };
-                    }
-                } catch (error) {
-                    console.error(`Error fetching operation ${operation_id} for account ${account_id}: ${error.message}`);
-                    // Fall back to sample data
-                }
+            // Fail-closed: refuse to return stub data
+            if (config.useStubs) {
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    'Financial data unavailable: Server is running in stub mode. Connect to real backend services to access financial data.'
+                );
             }
 
-            return operationData;
+            try {
+                const response = await api.operations.get(organization_id, ledger_id, account_id, operation_id);
+                if (!response) {
+                    throw new Error('Backend service returned empty response');
+                }
+
+                return {
+                    ...response,
+                    organization_id,
+                    ledger_id,
+                    account_id
+                };
+            } catch (error) {
+                // Fail-closed: refuse to return stub data
+                throw createErrorResponse(
+                    ErrorCodes.RESOURCE_UNAVAILABLE,
+                    `Financial data unavailable: ${error.message}. Backend service may be down.`
+                );
+            }
         })
     );
 }; 
