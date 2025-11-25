@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { validateInput, auditToolInvocation, checkRateLimit } from './security.js';
+import { validateInput, auditToolInvocation, checkRateLimit, auditResourceAccess } from './security.js';
 
 /**
  * Wrap a tool handler with security features

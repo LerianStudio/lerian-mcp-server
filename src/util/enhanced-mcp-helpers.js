@@ -1,12 +1,12 @@
 /**
  * Enhanced MCP Protocol Helper Functions
- * 
+ *
  * This module extends the base MCP helpers with advanced output formatting
  * capabilities, providing automatic client detection and appropriate formatting
  * for optimal display across different MCP clients.
  */
 
-import { 
+import {
   createToolResponse as baseCreateToolResponse,
   createErrorResponse,
   createPaginatedResponse,
@@ -15,6 +15,7 @@ import {
   logToolInvocation,
   ErrorCodes
 } from './mcp-helpers.js';
+import { createSignedCursor, verifyAndDecodeCursor } from './cursor-security.js';
 import { 
   createClientAdapter,
   formatMcpResponse 
@@ -213,20 +214,21 @@ export function createListResponse(items, extra = {}, options = {}) {
  */
 export function createEnhancedPaginatedResponse(items, extra = {}, options = {}) {
   const { cursor, limit = 10 } = options;
-  
+
   let startIndex = 0;
   if (cursor) {
     try {
-      startIndex = parseInt(Buffer.from(cursor, 'base64').toString('utf8'), 10);
+      const decoded = verifyAndDecodeCursor(cursor);
+      startIndex = parseInt(decoded, 10);
     } catch (e) {
       throw createErrorResponse(ErrorCodes.INVALID_PARAMS, 'Invalid cursor');
     }
   }
-  
+
   const endIndex = startIndex + limit;
   const paginatedItems = items.slice(startIndex, endIndex);
   const hasMore = endIndex < items.length;
-  
+
   const response = {
     items: paginatedItems,
     total: items.length,
@@ -234,9 +236,9 @@ export function createEnhancedPaginatedResponse(items, extra = {}, options = {})
     pageSize: limit,
     hasMore
   };
-  
+
   if (hasMore) {
-    response.nextCursor = Buffer.from(endIndex.toString()).toString('base64');
+    response.nextCursor = createSignedCursor(endIndex);
   }
   
   // Apply enhanced formatting to the paginated response

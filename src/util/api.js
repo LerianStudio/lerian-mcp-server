@@ -5,6 +5,7 @@
 import config from '../config.js';
 import ENDPOINTS from './api-endpoints.js';
 import fetch from 'node-fetch';
+import { enhancedFetch } from './http-client.js';
 
 // Maximum number of retries for API calls
 const MAX_RETRIES = config.backend.retries;

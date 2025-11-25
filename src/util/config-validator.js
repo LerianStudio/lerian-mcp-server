@@ -195,10 +195,20 @@ export function mergeConfigs(...configs) {
  */
 function deepMerge(target, source) {
   for (const key in source) {
+    // Only process own properties
+    if (!Object.hasOwnProperty.call(source, key)) {
+      continue;
+    }
+
+    // Prevent prototype pollution
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+      continue;
+    }
+
     if (source[key] === null || source[key] === undefined) {
       continue;
     }
-    
+
     if (typeof source[key] === 'object' && !Array.isArray(source[key])) {
       if (!target[key]) {
         target[key] = {};

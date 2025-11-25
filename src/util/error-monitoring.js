@@ -42,6 +42,7 @@ export class ErrorMonitor {
         this.maxLogFiles = options.maxLogFiles || 10;
         this.maxLogSize = options.maxLogSize || 10 * 1024 * 1024; // 10MB default
         this.performanceTracking = options.performanceTracking === true; // Changed to opt-in
+        this.flushInterval = null; // Initialize flush interval holder
 
         // Initialize metrics
         this.metrics = {
@@ -78,6 +79,12 @@ export class ErrorMonitor {
                 type: 'uncaughtException',
                 timestamp: new Date().toISOString()
             });
+
+            // Give time for logs to flush, then exit
+            setTimeout(() => {
+                console.error('Exiting due to uncaught exception');
+                process.exit(1);
+            }, 1000);
         });
 
         process.on('unhandledRejection', (reason, promise) => {
@@ -86,7 +93,15 @@ export class ErrorMonitor {
                 promise: promise.toString(),
                 timestamp: new Date().toISOString()
             });
+
+            // Log but don't exit for unhandled rejections (modern Node.js behavior)
+            console.error('Unhandled rejection detected, continuing execution');
         });
+
+        // Start periodic flushing if enabled
+        if (process.env.METRICS_FLUSH_ENABLED === 'true') {
+            this.startPeriodicFlush();
+        }
     }
 
     /**
@@ -239,6 +254,53 @@ export class ErrorMonitor {
         score -= criticalOps * 10;
 
         return Math.max(0, Math.min(100, score));
+    }
+
+    /**
+     * Flush metrics to file
+     */
+    flushMetrics() {
+        if (!this.enabled) return;
+
+        try {
+            // Ensure log directory exists
+            if (!existsSync(this.logDirectory)) {
+                mkdirSync(this.logDirectory, { recursive: true });
+            }
+
+            const metricsSnapshot = this.getMetrics();
+            const metricsFile = join(this.logDirectory, 'metrics-snapshot.json');
+
+            writeFileSync(metricsFile, JSON.stringify(metricsSnapshot, null, 2));
+
+            console.log('Metrics flushed to file', {
+                file: metricsFile,
+                timestamp: new Date().toISOString()
+            });
+        } catch (error) {
+            console.error('Failed to flush metrics:', error);
+        }
+    }
+
+    /**
+     * Start periodic metrics flushing
+     */
+    startPeriodicFlush(intervalMs = 300000) { // Default: 5 minutes
+        if (!this.enabled) return;
+
+        this.flushInterval = setInterval(() => {
+            this.flushMetrics();
+        }, intervalMs);
+    }
+
+    /**
+     * Stop periodic flushing
+     */
+    stopPeriodicFlush() {
+        if (this.flushInterval) {
+            clearInterval(this.flushInterval);
+            this.flushMetrics(); // Final flush
+        }
     }
 
     /**

@@ -239,6 +239,9 @@ async function loadConfig() {
     // If a specific config file is provided via command line, try to load it
     if (argsConfig._configFile) {
         try {
+            // Validate config path to prevent path traversal attacks (CRT-002)
+            validateConfigPath(argsConfig._configFile);
+
             if (fs.existsSync(argsConfig._configFile)) {
                 const fileContent = fs.readFileSync(argsConfig._configFile, 'utf8');
                 const fileConfig = JSON.parse(fileContent);
@@ -261,6 +264,13 @@ async function loadConfig() {
                     ...argsConfig, // Command line args override file config
                     _source: argsConfig._configFile,
                 };
+
+                // Validate configuration
+                const validation = validateConfig(loadedConfig);
+                if (!validation.success) {
+                    throw new Error(`Invalid configuration: ${validation.errors.join(', ')}`);
+                }
+
                 configSource = argsConfig._configFile;
 
                 // Remove the internal _configFile property
@@ -354,6 +364,13 @@ async function loadConfig() {
                         ...argsConfig, // Command line args override file config
                         _source: configPath,
                     };
+
+                    // Validate configuration
+                    const validation = validateConfig(loadedConfig);
+                    if (!validation.success) {
+                        throw new Error(`Invalid configuration: ${validation.errors.join(', ')}`);
+                    }
+
                     configSource = configPath;
                     break;
                 }
@@ -385,6 +402,12 @@ async function loadConfig() {
         delete loadedConfig._configFile;
     }
 
+    // Validate final merged configuration
+    const validation = validateConfig(loadedConfig);
+    if (!validation.success) {
+        throw new Error(`Invalid configuration: ${validation.errors.join(', ')}`);
+    }
+
     return loadedConfig;
 }
 
@@ -401,17 +424,15 @@ function validateConfigPath(configPath) {
         return true;
     }
 
-    import('path').then(path => {
-        // Sanitize input to prevent path traversal
-        const sanitizedPath = configPath.replace(/\.\./g, '').replace(/\/\//g, '/');
-        const resolvedPath = path.resolve(sanitizedPath);
-        const allowedDirs = [process.cwd(), '/etc/lerian', '/etc/midaz']; // backward compatibility
-        const isAllowed = allowedDirs.some(dir => resolvedPath.startsWith(path.resolve(dir)));
+    // Sanitize input to prevent path traversal
+    const sanitizedPath = configPath.replace(/\.\./g, '').replace(/\/\//g, '/');
+    const resolvedPath = path.resolve(sanitizedPath);
+    const allowedDirs = [process.cwd(), '/etc/lerian', '/etc/midaz']; // backward compatibility
+    const isAllowed = allowedDirs.some(dir => resolvedPath.startsWith(path.resolve(dir)));
 
-        if (!isAllowed) {
-            throw new Error(`Config path not allowed: ${configPath}`);
-        }
-    });
+    if (!isAllowed) {
+        throw new Error(`Config path not allowed: ${configPath}`);
+    }
 
     return true;
 }

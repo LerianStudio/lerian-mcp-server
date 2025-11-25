@@ -245,6 +245,52 @@ const main = async () => {
 
     await server.connect(transport);
 
+    // Graceful shutdown handling
+    let isShuttingDown = false;
+
+    const gracefulShutdown = async (signal: string) => {
+      if (isShuttingDown) return;
+      isShuttingDown = true;
+
+      logger.info(`Received ${signal}, initiating graceful shutdown...`);
+
+      try {
+        // Set timeout to force shutdown if graceful close takes too long
+        const shutdownTimeout = setTimeout(() => {
+          logger.error('Graceful shutdown timeout exceeded (30s), forcing exit');
+          globalErrorMonitor.logError(
+            new Error('Forced shutdown due to timeout'),
+            ErrorSeverity.HIGH,
+            { signal, timeout: 30000 }
+          );
+          process.exit(1);
+        }, 30000); // 30 second timeout
+
+        // Flush metrics before closing
+        globalErrorMonitor.stopPeriodicFlush();
+
+        // Close the MCP server connection (waits for in-flight requests)
+        await server.close();
+
+        // Clear timeout if shutdown completes successfully
+        clearTimeout(shutdownTimeout);
+
+        logger.info('Server closed successfully');
+        process.exit(0);
+      } catch (error) {
+        logger.error('Error during shutdown:', error instanceof Error ? error : String(error));
+        globalErrorMonitor.logError(
+          error instanceof Error ? error : new Error(String(error)),
+          ErrorSeverity.CRITICAL,
+          { signal, phase: 'shutdown' }
+        );
+        process.exit(1);
+      }
+    };
+
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
     // Initialize client detection system AFTER connecting to avoid race conditions
     const clientContext = await initializeClientDetection(server);
     logger.info('Client detected and configured', {

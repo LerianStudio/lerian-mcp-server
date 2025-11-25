@@ -274,7 +274,8 @@ export function sanitizeFilename(filename) {
   
   // Limit filename length
   if (sanitized.length > CONTENT_LIMITS.FILENAME) {
-    const ext = sanitized.slice(sanitized.lastIndexOf('.'));
+    const dotIndex = sanitized.lastIndexOf('.');
+    const ext = dotIndex !== -1 ? sanitized.slice(dotIndex) : '';
     const name = sanitized.slice(0, CONTENT_LIMITS.FILENAME - ext.length - 10);
     sanitized = name + '...' + ext;
   }

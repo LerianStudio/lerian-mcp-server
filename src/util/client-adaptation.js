@@ -271,14 +271,14 @@ export class ClientAdaptationManager {
    */
   applyEscapeHandling(data, escapeType) {
     const text = typeof data === 'string' ? data : JSON.stringify(data);
-    
+
     switch (escapeType) {
       case 'minimal':
         return text.replace(/["\\]/g, '\\$&'); // Only escape quotes and backslashes
-      
+
       case 'json':
-        return JSON.stringify(text); // Full JSON escaping
-      
+        return text; // Already stringified at line 273
+
       case 'standard':
       default:
         return text.replace(/["\\\n\r\t]/g, match => {

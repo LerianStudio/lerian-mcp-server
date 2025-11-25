@@ -139,6 +139,15 @@ export class ToolRegistry {
       ...metadata
     });
 
+    // Check for duplicate registration
+    if (this.tools.has(toolName)) {
+      logger.warn('Tool registration overwrite detected', {
+        tool: toolName,
+        previousRegistration: this.tools.get(toolName).registeredAt,
+        newRegistration: new Date().toISOString()
+      });
+    }
+
     this.tools.set(toolName, {
       definition: toolDefinition,
       metadata: toolMeta,

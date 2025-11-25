@@ -4,6 +4,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { createSignedCursor, verifyAndDecodeCursor } from './cursor-security.js';
 
 // Content type constants
 export const ContentTypes = {
@@ -106,14 +107,20 @@ export function createToolResponse(data, contentType = ContentTypes.TEXT) {
  * Create MCP-compliant error response
  */
 export function createErrorResponse(error, code = ErrorCodes.INTERNAL_ERROR) {
+  const errorData = {
+    details: error.details || {}
+  };
+
+  // Only include stack trace in development environment
+  if (process.env.NODE_ENV === 'development') {
+    errorData.stack = error.stack;
+  }
+
   return {
     error: {
       code,
       message: error.message || 'Unknown error',
-      data: {
-        stack: error.stack,
-        details: error.details || {}
-      }
+      data: errorData
     },
     isError: true
   };
@@ -149,10 +156,14 @@ export function createPaginatedResponse(items, cursor, limit, totalCount = null)
  */
 export function parseCursor(cursorStr) {
   if (!cursorStr) return { offset: 0 };
-  
+
   try {
-    // Base64 decode
-    const decoded = Buffer.from(cursorStr, 'base64').toString('utf8');
+    // Verify HMAC signature and decode
+    const decoded = verifyAndDecodeCursor(cursorStr);
+    // If decoded is already an object, return it; otherwise parse it
+    if (typeof decoded === 'object') {
+      return decoded;
+    }
     return JSON.parse(decoded);
   } catch {
     // Fallback to simple offset
@@ -168,8 +179,8 @@ export function createCursor(data) {
   if (typeof data === 'number') {
     data = { offset: data };
   }
-  // Base64 encode
-  return Buffer.from(JSON.stringify(data)).toString('base64');
+  // Create HMAC-signed cursor
+  return createSignedCursor(data);
 }
 
 /**

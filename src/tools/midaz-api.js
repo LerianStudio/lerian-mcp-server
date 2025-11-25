@@ -30,7 +30,7 @@ const CACHE_TTL = 5 * 60 * 1000;
 export const registerMidazApiTools = (server) => {
 
   server.tool(
-    "midaz_api",
+    "midaz-api",
     "Unified Midaz API interface with real authentication and CRUD operations. Supports test (dry-run) and execute modes with proper error context and exponential backoff.",
     {
       operation: z.enum(['list', 'get', 'create', 'update', 'delete']).describe("CRUD operation to perform"),
@@ -255,7 +255,8 @@ async function getAuthToken() {
         grant_type: 'client_credentials',
         client_id: authConfig.clientId,
         client_secret: authConfig.clientSecret
-      })
+      }),
+      signal: AbortSignal.timeout(10000) // 10 second timeout for auth
     });
 
     if (!tokenResponse.ok) {
@@ -300,7 +301,8 @@ async function executeApiCall(operation, resource, params, token) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: body ? JSON.stringify(body) : null
+        body: body ? JSON.stringify(body) : null,
+        signal: AbortSignal.timeout(30000) // 30 second timeout for API calls
       });
 
       const responseData = response.headers.get('content-type')?.includes('application/json')
@@ -614,7 +616,7 @@ function generateTroubleshootingTips(error) {
 
   return tips.length > 0 ? tips : [
     'Check API documentation with midaz_docs',
-    'Verify service status with midaz_status',
+    'Verify service status with midaz-status',
     'Try test mode first to validate parameters'
   ];
 }

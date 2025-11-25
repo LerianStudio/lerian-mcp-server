@@ -56,7 +56,7 @@ const HEALTH_CACHE_TTL = 30 * 1000;
 export const registerMidazStatusTools = (server) => {
 
   server.tool(
-    "midaz_status",
+    "midaz-status",
     "Real-time Midaz system health monitoring. Checks API latency, service status (ledger, auth, transactions), recent errors with solutions, and performance metrics. Returns actual diagnostic data.",
     {
       check: z.enum(['overview', 'services', 'performance', 'errors', 'connectivity', 'all']).default('all').describe("Type of status check to perform"),

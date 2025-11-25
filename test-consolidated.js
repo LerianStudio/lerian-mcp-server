@@ -55,9 +55,9 @@ async function runTests() {
       format: 'detailed'
     });
     
-    // Scenario 2: "list my organizations" - should make real api call  
+    // Scenario 2: "list my organizations" - should make real api call
     console.log('\n🌐 SCENARIO 2: Real API call to list organizations');
-    await testServer.tools?.find(t => t.name === 'midaz_api')?.test({
+    await testServer.tools?.find(t => t.name === 'midaz-api')?.test({
       operation: 'list',
       resource: 'organizations',
       mode: 'test', // Use test mode for safety
@@ -66,7 +66,7 @@ async function runTests() {
     
     // Scenario 3: "generate nodejs payment flow" - should output complete implementation
     console.log('\n⚡ SCENARIO 3: Generate Node.js payment flow code');
-    await testServer.tools?.find(t => t.name === 'midaz_generate')?.test({
+    await testServer.tools?.find(t => t.name === 'midaz-generate')?.test({
       useCase: 'nodejs payment flow',
       language: 'javascript',
       complexity: 'production',
@@ -75,7 +75,7 @@ async function runTests() {
     
     // Scenario 4: "what's wrong with midaz?" - should show actual metrics
     console.log('\n🔍 SCENARIO 4: Health and status monitoring');
-    await testServer.tools?.find(t => t.name === 'midaz_status')?.test({
+    await testServer.tools?.find(t => t.name === 'midaz-status')?.test({
       check: 'all',
       includeMetrics: true,
       timeWindow: '15m'

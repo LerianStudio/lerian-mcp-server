@@ -242,7 +242,7 @@ async function fetchManifest() {
     logger.info('Fetching documentation from llms.txt', { url: LLMS_TXT_URL });
     
     const response = await fetch(LLMS_TXT_URL, {
-      timeout: 10000, // Increase timeout to 10 seconds
+      signal: AbortSignal.timeout(10000), // 10 second timeout (node-fetch v3 API)
       headers: {
         'User-Agent': 'Lerian-MCP-Server/2.2.0',
         'Accept': 'text/plain, */*'

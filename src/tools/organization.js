@@ -94,6 +94,7 @@ export const registerOrganizationTools = (server) => {
             }));
 
             let organizations = sampleOrganizations;
+            let isUsingStubData = true;
 
             // Only attempt real API call if stubs are disabled
             if (!config.useStubs) {
@@ -101,6 +102,7 @@ export const registerOrganizationTools = (server) => {
                     const response = await api.organizations.list();
                     if (response && response.items) {
                         organizations = response.items;
+                        isUsingStubData = false;
                     }
                 } catch (error) {
                     console.error(`Error fetching organizations: ${error.message}`);
@@ -108,8 +110,17 @@ export const registerOrganizationTools = (server) => {
                 }
             }
 
-            // Return paginated response
-            return createPaginatedResponse(organizations, validatedArgs);
+            // Return paginated response with metadata indicating data source
+            const metadata = isUsingStubData ? {
+                isStub: true,
+                dataSource: 'stub',
+                reason: config.useStubs ? 'stubs_enabled' : 'backend_unavailable'
+            } : {
+                isStub: false,
+                dataSource: 'api'
+            };
+
+            return createPaginatedResponse(organizations, validatedArgs, metadata);
         })
     );
 

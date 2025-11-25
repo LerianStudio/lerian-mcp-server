@@ -1,9 +1,11 @@
 /**
  * MCP Protocol Helper Functions
- * 
+ *
  * This module provides utilities for creating MCP-compliant responses
  * according to the Model Context Protocol specification.
  */
+
+import { createSignedCursor, verifyAndDecodeCursor } from './cursor-security.js';
 
 /**
  * Create a successful MCP tool response
@@ -64,35 +66,45 @@ export const ErrorCodes = {
  * Create a paginated response with cursor support
  * @param {Array} items - Array of items
  * @param {Object} options - Pagination options
+ * @param {Object} metadata - Optional metadata (e.g., { isStub: boolean, dataSource: string })
  * @returns {Object} Paginated response with cursor
  */
-export function createPaginatedResponse(items, options = {}) {
+export function createPaginatedResponse(items, options = {}, metadata = {}) {
   const { cursor, limit = 10 } = options;
-  
+
   let startIndex = 0;
   if (cursor) {
-    // Decode cursor (base64 encoded index)
+    // Decode HMAC-signed cursor
     try {
-      startIndex = parseInt(Buffer.from(cursor, 'base64').toString('utf8'), 10);
+      const decoded = verifyAndDecodeCursor(cursor);
+      startIndex = parseInt(decoded, 10);
     } catch (e) {
       throw createErrorResponse(ErrorCodes.INVALID_PARAMS, 'Invalid cursor');
     }
   }
-  
+
   const endIndex = startIndex + limit;
   const paginatedItems = items.slice(startIndex, endIndex);
   const hasMore = endIndex < items.length;
-  
+
   const response = {
     items: paginatedItems,
     total: items.length
   };
-  
+
   if (hasMore) {
-    // Create cursor for next page (base64 encoded index)
-    response.nextCursor = Buffer.from(endIndex.toString()).toString('base64');
+    // Create HMAC-signed cursor for next page
+    response.nextCursor = createSignedCursor(endIndex);
   }
-  
+
+  // Add metadata for data source indication
+  if (Object.keys(metadata).length > 0) {
+    response._metadata = {
+      ...metadata,
+      timestamp: new Date().toISOString()
+    };
+  }
+
   return createToolResponse(response);
 }
 

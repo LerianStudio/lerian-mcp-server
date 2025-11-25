@@ -18,7 +18,7 @@ const logger = createLogger('midaz-generate');
 export const registerMidazGenerateTools = (server) => {
 
   server.tool(
-    "midaz_generate",
+    "midaz-generate",
     "Generate working code for Midaz integration. Detects user context (language, framework, deployment) and outputs production-ready code with error handling, retries, and environment variables.",
     {
       useCase: z.string().describe("Specific use case (e.g., 'nodejs payment flow', 'python balance checker', 'shell integration')"),
