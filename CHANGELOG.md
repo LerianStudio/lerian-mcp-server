@@ -1,3 +1,10 @@
+# [2.38.0](https://github.com/lerianstudio/lerian-mcp-server/compare/v2.37.0...v2.38.0) (2025-11-25)
+
+
+### Features
+
+* **security:** add automatic secret generation and management ([252cade](https://github.com/lerianstudio/lerian-mcp-server/commit/252cade7eba294f4356673b230a8b3861e47e4cc))
+
 # [2.37.0](https://github.com/lerianstudio/lerian-mcp-server/compare/v2.36.0...v2.37.0) (2025-11-25)
 
 
