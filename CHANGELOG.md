@@ -1,3 +1,10 @@
+# [2.37.0](https://github.com/lerianstudio/lerian-mcp-server/compare/v2.36.0...v2.37.0) (2025-11-25)
+
+
+### Features
+
+* **server:** implement graceful shutdown for SIGTERM and SIGINT ([71be5e1](https://github.com/lerianstudio/lerian-mcp-server/commit/71be5e10abc0342f3cca6bccf696bc31e3ee90a4))
+
 # [2.36.0](https://github.com/lerianstudio/lerian-mcp-server/compare/v2.35.0...v2.36.0) (2025-10-20)
 
 # [2.35.0](https://github.com/lerianstudio/lerian-mcp-server/compare/v2.34.0...v2.35.0) (2025-10-20)
