@@ -1,40 +1,27 @@
 /**
  * Configuration management for the Lerian MCP server
  * Handles environment variables, config files, and default settings
+ * DOCUMENTATION-ONLY MODE: Backend API configuration removed
  */
 
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { validateConfig, buildConfigFromEnv, mergeConfigs } from './util/config-validator.js';
-import { loadSecureConfiguration, sanitizeConfig } from './util/config-security.js';
 
 /**
  * Default configuration for the Lerian MCP server
+ * Documentation and learning resources only
  */
 const defaultConfig = {
-    backend: {
-        onboarding: {
-            baseUrl: 'http://localhost:3000',
-            apiKey: null,
-        },
-        transaction: {
-            baseUrl: 'http://localhost:3001',
-            apiKey: null,
-        },
-        timeout: 10000, // 10 seconds
-        retries: 3,
-    },
     server: {
         name: 'lerian-mcp-server',
-        version: '3.0.0',
-        description: 'Lerian MCP Server for financial ledger operations'
+        version: '4.0.0',
+        description: 'Lerian MCP Server - Documentation and Learning Resources'
     },
-    useStubs: true, // Default to using stub data if no real connection is available
-    logLevel: 'info', // Default log level
-    autoDetect: true, // Automatically detect local services
-    localOnly: true, // Only accept connections from localhost
     docsUrl: 'https://docs.lerian.studio', // Base URL for online documentation
+    logLevel: 'info', // Default log level
+    detailedLogs: false, // Detailed logging (disabled by default)
+    consoleLogs: false, // Console logging (disabled by default)
 };
 
 // Config file locations to try (in order of preference)
@@ -91,54 +78,16 @@ function parseCommandLineArgs() {
     // Transform parsed arguments into config structure
     const configFromArgs = {};
 
-    // Handle onboarding URL
-    if (parsedArgs['onboarding-url']) {
-        configFromArgs.backend = configFromArgs.backend || {};
-        configFromArgs.backend.onboarding = configFromArgs.backend.onboarding || {};
-        configFromArgs.backend.onboarding.baseUrl = parsedArgs['onboarding-url'];
-    }
-
-    // Handle transaction URL
-    if (parsedArgs['transaction-url']) {
-        configFromArgs.backend = configFromArgs.backend || {};
-        configFromArgs.backend.transaction = configFromArgs.backend.transaction || {};
-        configFromArgs.backend.transaction.baseUrl = parsedArgs['transaction-url'];
-    }
-
-    // For backward compatibility, support the old backend-url parameter
-    if (parsedArgs['backend-url']) {
-        configFromArgs.backend = configFromArgs.backend || {};
-        configFromArgs.backend.onboarding = configFromArgs.backend.onboarding || {};
-        configFromArgs.backend.transaction = configFromArgs.backend.transaction || {};
-        configFromArgs.backend.onboarding.baseUrl = parsedArgs['backend-url'];
-        configFromArgs.backend.transaction.baseUrl = parsedArgs['backend-url'];
-    }
-
-    // Handle API key (shared between both backends)
-    if (parsedArgs['api-key']) {
-        configFromArgs.backend = configFromArgs.backend || {};
-        configFromArgs.backend.onboarding = configFromArgs.backend.onboarding || {};
-        configFromArgs.backend.transaction = configFromArgs.backend.transaction || {};
-        configFromArgs.backend.onboarding.apiKey = parsedArgs['api-key'];
-        configFromArgs.backend.transaction.apiKey = parsedArgs['api-key'];
-    }
-
-    if (parsedArgs['timeout']) {
-        configFromArgs.backend = configFromArgs.backend || {};
-        configFromArgs.backend.timeout = parseInt(parsedArgs['timeout'], 10);
-    }
-
-    if (parsedArgs['retries']) {
-        configFromArgs.backend = configFromArgs.backend || {};
-        configFromArgs.backend.retries = parseInt(parsedArgs['retries'], 10);
-    }
-
-    if (parsedArgs['stub-mode'] !== undefined) {
-        configFromArgs.useStubs = parsedArgs['stub-mode'] === 'true' || parsedArgs['stub-mode'] === true;
-    }
-
     if (parsedArgs['log-level']) {
         configFromArgs.logLevel = parsedArgs['log-level'];
+    }
+
+    if (parsedArgs['detailed-logs'] !== undefined) {
+        configFromArgs.detailedLogs = parsedArgs['detailed-logs'] === 'true' || parsedArgs['detailed-logs'] === true;
+    }
+
+    if (parsedArgs['console-logs'] !== undefined) {
+        configFromArgs.consoleLogs = parsedArgs['console-logs'] === 'true' || parsedArgs['console-logs'] === true;
     }
 
     if (parsedArgs['config-file']) {
@@ -150,80 +99,6 @@ function parseCommandLineArgs() {
     return configFromArgs;
 }
 
-/**
- * Auto-detect local services and update configuration
- * @param {Object} config - Configuration object to update
- */
-async function autoDetectServices(config) {
-    const services = [
-        {
-            name: 'onboarding',
-            url: config.backend.onboarding.baseUrl,
-            healthPath: '/health',
-            apiPath: '/v1/organizations'
-        },
-        {
-            name: 'transaction',
-            url: config.backend.transaction.baseUrl,
-            healthPath: '/health',
-            apiPath: '/v1/health'
-        }
-    ];
-
-    for (const service of services) {
-        try {
-            // Validate service URL to prevent file content exposure
-            if (!service.url || !service.url.startsWith('http')) {
-                console.warn(`Invalid service URL for ${service.name}: ${service.url}`);
-                continue;
-            }
-
-            // Try health endpoint first
-            const healthUrl = `${service.url}${service.healthPath}`;
-            const response = await fetch(healthUrl, {
-                method: 'GET',
-                signal: AbortSignal.timeout(2000)
-            });
-
-            if (response.ok) {
-                // Auto-detected service (silent for MCP protocol)
-                config.useStubs = false; // Disable stubs if any service is available
-            } else {
-                // Service status error (silent for MCP protocol)
-            }
-        } catch (error) {
-            // Try API endpoint as fallback
-            try {
-                // Additional URL validation for API endpoint
-                const apiUrl = `${service.url}${service.apiPath}`;
-                if (!apiUrl.startsWith('http')) {
-                    console.warn(`Invalid API URL for ${service.name}: ${apiUrl}`);
-                    continue;
-                }
-
-                const response = await fetch(apiUrl, {
-                    method: 'GET',
-                    signal: AbortSignal.timeout(2000)
-                });
-
-                if (response.ok || response.status === 404 || response.status === 401) {
-                    // Auto-detected service API endpoint (silent for MCP protocol)
-                    config.useStubs = false; // Disable stubs if any service is available
-                } else {
-                    throw new Error(`Status ${response.status}`);
-                }
-            } catch (apiError) {
-                // Service not available (silent for MCP protocol)
-            }
-        }
-    }
-
-    if (config.useStubs) {
-        // Using stub data mode (silent for MCP protocol)
-    } else {
-        // Connected to live Lerian services (silent for MCP protocol)
-    }
-}
 
 /**
  * Load configuration from the first available config file
@@ -239,7 +114,7 @@ async function loadConfig() {
     // If a specific config file is provided via command line, try to load it
     if (argsConfig._configFile) {
         try {
-            // Validate config path to prevent path traversal attacks (CRT-002)
+            // Validate config path to prevent path traversal attacks
             validateConfigPath(argsConfig._configFile);
 
             if (fs.existsSync(argsConfig._configFile)) {
@@ -249,28 +124,9 @@ async function loadConfig() {
                 loadedConfig = {
                     ...defaultConfig,
                     ...fileConfig,
-                    backend: {
-                        ...defaultConfig.backend,
-                        ...(fileConfig.backend || {}),
-                        onboarding: {
-                            ...defaultConfig.backend.onboarding,
-                            ...(fileConfig.backend?.onboarding || {}),
-                        },
-                        transaction: {
-                            ...defaultConfig.backend.transaction,
-                            ...(fileConfig.backend?.transaction || {}),
-                        },
-                    },
                     ...argsConfig, // Command line args override file config
                     _source: argsConfig._configFile,
                 };
-
-                // Validate configuration
-                const validation = validateConfig(loadedConfig);
-                if (!validation.success) {
-                    const errorMessages = validation.errors.map(err => `${err.path}: ${err.message}`).join('; ');
-                    throw new Error(`Invalid configuration: ${errorMessages}`);
-                }
 
                 configSource = argsConfig._configFile;
 
@@ -285,54 +141,20 @@ async function loadConfig() {
 
     // Try to load from environment variables next
     const envConfig = {
-        backend: {
-            onboarding: {
-                ...(process.env.MIDAZ_ONBOARDING_URL && { baseUrl: process.env.MIDAZ_ONBOARDING_URL }),
-                ...(process.env.MIDAZ_API_KEY && { apiKey: process.env.MIDAZ_API_KEY }),
-            },
-            transaction: {
-                ...(process.env.MIDAZ_TRANSACTION_URL && { baseUrl: process.env.MIDAZ_TRANSACTION_URL }),
-                ...(process.env.MIDAZ_API_KEY && { apiKey: process.env.MIDAZ_API_KEY }),
-            },
-            ...(process.env.MIDAZ_BACKEND_TIMEOUT && { timeout: parseInt(process.env.MIDAZ_BACKEND_TIMEOUT, 10) }),
-            ...(process.env.MIDAZ_BACKEND_RETRIES && { retries: parseInt(process.env.MIDAZ_BACKEND_RETRIES, 10) }),
-        },
-        ...(process.env.MIDAZ_USE_STUBS !== undefined && { useStubs: process.env.MIDAZ_USE_STUBS === 'true' }),
+        ...(process.env.LERIAN_LOG_LEVEL && { logLevel: process.env.LERIAN_LOG_LEVEL }),
+        ...(process.env.LERIAN_DETAILED_LOGS !== undefined && { detailedLogs: process.env.LERIAN_DETAILED_LOGS === 'true' }),
+        ...(process.env.LERIAN_CONSOLE_LOGS !== undefined && { consoleLogs: process.env.LERIAN_CONSOLE_LOGS === 'true' }),
+        // Backward compatibility with MIDAZ_ prefix
         ...(process.env.MIDAZ_LOG_LEVEL && { logLevel: process.env.MIDAZ_LOG_LEVEL }),
     };
 
-    // For backward compatibility, check for the old MIDAZ_BACKEND_URL
-    if (process.env.MIDAZ_BACKEND_URL) {
-        envConfig.backend.onboarding.baseUrl = process.env.MIDAZ_BACKEND_URL;
-        envConfig.backend.transaction.baseUrl = process.env.MIDAZ_BACKEND_URL;
-    }
-
     // Only use environment config if at least one value is set
-    const hasEnvConfig =
-        (envConfig.backend.onboarding.baseUrl !== undefined ||
-            envConfig.backend.onboarding.apiKey !== undefined ||
-            envConfig.backend.transaction.baseUrl !== undefined ||
-            envConfig.backend.transaction.apiKey !== undefined ||
-            envConfig.backend.timeout !== undefined ||
-            envConfig.backend.retries !== undefined) ||
-        Object.keys(envConfig).filter(key => key !== 'backend').length > 0;
+    const hasEnvConfig = Object.keys(envConfig).length > 0;
 
     if (hasEnvConfig) {
         loadedConfig = {
             ...defaultConfig,
             ...envConfig,
-            backend: {
-                ...defaultConfig.backend,
-                ...(envConfig.backend || {}),
-                onboarding: {
-                    ...defaultConfig.backend.onboarding,
-                    ...(envConfig.backend?.onboarding || {}),
-                },
-                transaction: {
-                    ...defaultConfig.backend.transaction,
-                    ...(envConfig.backend?.transaction || {}),
-                },
-            },
             ...argsConfig, // Command line args override environment variables
             _source: 'environment',
         };
@@ -350,28 +172,9 @@ async function loadConfig() {
                     loadedConfig = {
                         ...defaultConfig,
                         ...fileConfig,
-                        backend: {
-                            ...defaultConfig.backend,
-                            ...(fileConfig.backend || {}),
-                            onboarding: {
-                                ...defaultConfig.backend.onboarding,
-                                ...(fileConfig.backend?.onboarding || {}),
-                            },
-                            transaction: {
-                                ...defaultConfig.backend.transaction,
-                                ...(fileConfig.backend?.transaction || {}),
-                            },
-                        },
                         ...argsConfig, // Command line args override file config
                         _source: configPath,
                     };
-
-                    // Validate configuration
-                    const validation = validateConfig(loadedConfig);
-                    if (!validation.success) {
-                        const errorMessages = validation.errors.map(err => `${err.path}: ${err.message}`).join('; ');
-                        throw new Error(`Invalid configuration: ${errorMessages}`);
-                    }
 
                     configSource = configPath;
                     break;
@@ -392,23 +195,9 @@ async function loadConfig() {
         };
     }
 
-    // MCP server config source (silent for MCP protocol)
-
-    // Auto-detect local services if enabled
-    if (loadedConfig.autoDetect) {
-        await autoDetectServices(loadedConfig);
-    }
-
     // Remove the internal _configFile property if it exists
     if (loadedConfig._configFile) {
         delete loadedConfig._configFile;
-    }
-
-    // Validate final merged configuration
-    const validation = validateConfig(loadedConfig);
-    if (!validation.success) {
-        const errorMessages = validation.errors.map(err => `${err.path}: ${err.message}`).join('; ');
-        throw new Error(`Invalid configuration: ${errorMessages}`);
     }
 
     return loadedConfig;

@@ -12,27 +12,13 @@ import { initializeMcpLogger, createLogger, logLifecycleEvent, logConfigEvent, l
 import { globalErrorMonitor, trackAsyncOperation, ErrorSeverity } from './util/error-monitoring.js';
 import { initializeSecrets, displaySecretsInfo } from './util/secret-manager.js';
 
-// Import unified tools (consolidates 17 tools into 2)
-import { registerUnifiedDocumentationTool } from './tools/docs-unified.js';
-import { registerUnifiedLearningTool } from './tools/learn-unified.js';
+// Import THE unified Lerian tool (all products, all operations in ONE tool)
+import { registerLerianTool } from './tools/lerian.js';
 
 // Import discovery prompts
 import { registerDiscoveryPrompts } from './prompts/tool-discovery.js';
 import { registerWorkflowPrompts } from './prompts/midaz-workflows.js';
 import { registerAdvancedPrompts } from './prompts/advanced-workflows.js';
-
-// Import tool definitions
-import { registerOrganizationTools } from './tools/organization.js';
-import { registerLedgerTools } from './tools/ledger.js';
-import { registerAccountTools } from './tools/account.js';
-import { registerTransactionTools } from './tools/transaction.js';
-import { registerBalanceTools } from './tools/balance.js';
-import { registerAssetTools } from './tools/asset.js';
-// Removed asset-rate tools import
-import { registerPortfolioTools } from './tools/portfolio.js';
-import { registerSegmentTools } from './tools/segment.js';
-import { registerSdkTools } from './tools/sdk.js';
-import { registerMonitoringTools } from './tools/monitoring.js';
 
 // Resources completely removed - no subscription handlers needed
 
@@ -41,12 +27,13 @@ import { initializeClientDetection } from './util/client-integration.js';
 
 /**
  * Create an MCP server for Lerian
- * 
- * This server provides Model Context Protocol (MCP) access to Lerian's financial ledger system.
- * It offers read-only API access, documentation, learning resources, and SDK code generation
+ *
+ * This server provides Model Context Protocol (MCP) access to Lerian's documentation and learning resources.
+ * It offers comprehensive documentation, interactive tutorials, SDK code generation, and best practices
  * for AI assistants like Claude, ChatGPT, and others.
- * 
+ *
  * @since 3.0.0 - Rebranded from Midaz to Lerian with full backward compatibility
+ * @since 4.0.0 - Transformed to documentation-only mode (API layer removed)
  */
 const main = async () => {
   return await trackAsyncOperation('server_startup', async () => {
@@ -61,24 +48,16 @@ const main = async () => {
     await initializeManifest();
     logConfigEvent('docs_manifest_initialized');
 
-    // Collect all capabilities with unified tools
+    // Collect all capabilities (documentation-only mode)
     const capabilities = {
       resources: false, // Completely removed
       tools: {
-        // Financial/Ledger tools (18 tools)
-        organization: true,
-        ledger: true,
-        account: true,
-        transaction: true,
-        balance: true,
-        asset: true,
-        portfolio: true,
-        segment: true,
-        sdk: true,
-        // Unified documentation & learning (2 tools - replaces 17 tools)
+        // Documentation & Learning (2 unified tools)
         unifiedDocumentation: true,
         unifiedLearning: true,
-        // Status monitoring
+        // SDK Tools (3 tools: generate, compare, find-examples)
+        sdk: true,
+        // Monitoring (3 tools: health, errors, performance)
         statusMonitoring: true
       },
       prompts: true, // Enable tool discovery prompts
@@ -101,10 +80,9 @@ const main = async () => {
     logLifecycleEvent('starting', { version: '2.5.1', capabilities });
     logger.info('Server initialization started', { version: '2.5.1' });
 
-    // Register unified tools (major consolidation: 17 → 2 tools)
-    registerUnifiedDocumentationTool(server);
-    registerUnifiedLearningTool(server);
-    logger.info('✅ Unified tools registered - 2 tools for MCP client compatibility');
+    // Register THE SINGLE unified Lerian tool (all products, all operations)
+    registerLerianTool(server);
+    logger.info('✅ Unified Lerian tool registered - 1 tool for all 5 products');
 
     // Register discovery prompts
     registerDiscoveryPrompts(server);
@@ -222,28 +200,8 @@ const main = async () => {
     });
     logger.info('✅ Prompt list handler override applied');
 
-    // Register financial/ledger tools (18 tools total)
-    const financialTools = [
-      'organization', 'ledger', 'account', 'transaction',
-      'balance', 'asset', 'portfolio', 'segment', 'sdk'
-    ];
-    registerOrganizationTools(server);
-    registerLedgerTools(server);
-    registerAccountTools(server);
-    registerTransactionTools(server);
-    registerBalanceTools(server);
-    registerAssetTools(server);
-    registerPortfolioTools(server);
-    registerSegmentTools(server);
-    registerSdkTools(server);
-    logger.info('✅ Financial API tools registered', { toolCount: 18, categories: financialTools.length });
-
-    // Register monitoring tools
-    registerMonitoringTools(server);
-    logger.info('✅ Monitoring tools registered', { toolCount: 3, features: ['health-status', 'error-metrics', 'performance-metrics'] });
-
-    // Total tool count: 2 unified + 18 financial + 3 monitoring = 23 tools (down from ~40)
-    logger.info('🎯 Total tools registered: ~23');
+    // Total: 1 unified tool (ultimate simplification!)
+    logger.info('🎯 Total tools: 1 (lerian tool - handles all products and operations)');
 
     // Connect to stdio transport
     const transport = new StdioServerTransport();

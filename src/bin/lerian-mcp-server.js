@@ -19,36 +19,13 @@ const __dirname = dirname(__filename);
 const isNpx = process.env.npm_config_user_agent?.includes('npx');
 
 // Print startup message
-console.error('🚀 Starting Lerian MCP Server...');
+console.error('🚀 Starting Lerian MCP Server (Documentation Mode)...');
+console.error('📚 Providing documentation, tutorials, and SDK code generation');
+console.error('💡 This server does NOT connect to Lerian backend APIs');
+console.error('   For live API access, use Lerian SDKs in your application');
+console.error('');
 if (isNpx) {
   console.error('📦 Running via npx');
-}
-
-// Check for local Lerian services
-async function checkLocalServices() {
-  const services = [
-    { name: 'Onboarding', url: 'http://localhost:3000/health', port: 3000 },
-    { name: 'Transaction', url: 'http://localhost:3001/health', port: 3001 }
-  ];
-
-  console.error('\n🔍 Checking for local Lerian services...');
-
-  for (const service of services) {
-    try {
-      const response = await fetch(service.url, {
-        method: 'GET',
-        signal: AbortSignal.timeout(1000)
-      });
-      if (response.ok) {
-        console.error(`✅ ${service.name} service detected on port ${service.port}`);
-      } else {
-        console.error(`⚠️  ${service.name} service on port ${service.port} returned status ${response.status}`);
-      }
-    } catch (error) {
-      console.error(`❌ ${service.name} service not available on port ${service.port} (will use stub data)`);
-    }
-  }
-  console.error('');
 }
 
 // Check for existing configuration
@@ -74,8 +51,7 @@ function checkConfiguration() {
 
 // Main execution
 async function main() {
-  // Check services and configuration
-  await checkLocalServices();
+  // Check configuration
   const configPath = checkConfiguration();
 
   // Determine the path to the actual server file
@@ -83,14 +59,6 @@ async function main() {
 
   // Prepare environment variables
   const env = { ...process.env };
-
-  // Set default backend URLs if not already set
-  if (!env.MIDAZ_BACKEND_ONBOARDING_URL) {
-    env.MIDAZ_BACKEND_ONBOARDING_URL = 'http://localhost:3000';
-  }
-  if (!env.MIDAZ_BACKEND_TRANSACTION_URL) {
-    env.MIDAZ_BACKEND_TRANSACTION_URL = 'http://localhost:3001';
-  }
 
   // If config file exists, pass it as an argument
   const args = process.argv.slice(2);

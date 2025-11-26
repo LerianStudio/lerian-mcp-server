@@ -1,262 +1,362 @@
 # Lerian MCP Server
 
-Give your AI assistant instant access to Lerian documentation and APIs! This plugin connects Claude, ChatGPT, and other AI assistants to the Lerian financial system, so you can get help with integration, APIs, and troubleshooting directly in your conversations.
+**Your AI's gateway to Lerian documentation, guides, and learning resources!**
 
-> **🔄 Migration Notice:** This package was previously known as `@lerianstudio/midaz-mcp-server`. Both package names work for backward compatibility, but we recommend migrating to the new `@lerianstudio/lerian-mcp-server` package name.
+This MCP server connects Claude, ChatGPT, and other AI assistants to comprehensive documentation for **all 5 Lerian products** (Midaz, Tracer, Flowker, Reporter, and more). Get instant help with integration, best practices, and code generation—all through natural conversation.
 
-## ⚡ 5-Minute Setup
+> **📚 Documentation-Only Mode:** This server provides documentation and learning resources. It does NOT connect to Lerian backend APIs. For live API access, use [Lerian SDKs](https://docs.lerian.studio/sdks) in your application.
+
+---
+
+## ⚡ 2-Minute Setup
 
 **Step 1:** Choose your AI assistant
-**Step 2:** Copy the configuration below  
+**Step 2:** Copy the configuration below
 **Step 3:** Restart your AI app
-**Step 4:** Start asking questions about Lerian!
+**Step 4:** Ask: *"What can you tell me about Lerian Midaz?"*
 
 ### 🖥️ Claude Desktop
 
-**Location:** `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows)
+**Location:** `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
+**Location:** `%APPDATA%\Claude\claude_desktop_config.json` (Windows)
 
 ```json
 {
   "mcpServers": {
     "lerian": {
       "command": "npx",
-      "args": ["@lerianstudio/lerian-mcp-server@latest"]
+      "args": ["-y", "@lerianstudio/lerian-mcp-server@latest"]
     }
   }
 }
 ```
 
-<details>
-<summary>🔄 <strong>Backward Compatibility</strong> (click to expand)</summary>
+### 🖥️ Cursor / Windsurf / Continue
+
+Add to your MCP configuration:
 
 ```json
 {
   "mcpServers": {
-    "midaz": {
+    "lerian": {
       "command": "npx",
-      "args": ["@lerianstudio/midaz-mcp-server@latest"]
+      "args": ["-y", "@lerianstudio/lerian-mcp-server@latest"]
     }
   }
 }
 ```
-*The old package name still works but is deprecated. Please migrate to `@lerianstudio/lerian-mcp-server`.*
-</details>
-
-### 🖥️ Claude Code (Command Line)
-
-```bash
-# Install once (new package)
-npm install -g @lerianstudio/lerian-mcp-server
-
-# Add to Claude Code
-claude mcp add lerian "lerian-mcp-server"
-```
-
-<details>
-<summary>🔄 <strong>Migration from old package</strong> (click to expand)</summary>
-
-```bash
-# Remove old package
-npm uninstall -g @lerianstudio/midaz-mcp-server
-
-# Install new package
-npm install -g @lerianstudio/lerian-mcp-server
-
-# Update Claude Code
-claude mcp remove midaz
-claude mcp add lerian "lerian-mcp-server"
-```
-</details>
 
 ### 💬 ChatGPT Desktop
 
-Add to your ChatGPT Desktop MCP configuration file:
+Same configuration in your ChatGPT Desktop MCP settings file.
 
-```json
-{
-  "mcpServers": {
-    "lerian": {
-      "command": "npx",
-      "args": ["@lerianstudio/lerian-mcp-server@latest"]
-    }
-  }
-}
-```
-
-### ⚡ Cursor IDE
-
-**Location:** File → Preferences → Cursor Settings → MCP → Add new global MCP Server
-
-```json
-{
-  "mcp.servers": {
-    "lerian": {
-      "command": "npm",
-      "args": ["exec", "@lerianstudio/lerian-mcp-server@latest"]
-    }
-  }
-}
-```
-
-### 🌊 Windsurf IDE
-
-**Location:** File → Preferences → Windsurf Settings → Manage plugins → View raw config
-
-```json
-{
-  "mcpServers": {
-    "lerian": {
-      "command": "npm",
-      "args": ["exec", "@lerianstudio/lerian-mcp-server@latest"]
-    }
-  }
-}
-```
-
-### 🔄 Continue IDE
-
-**Location:** `~/.continue/config.yaml` (MacOS / Linux) or `%USERPROFILE%\.continue\config.yaml` (Windows)
-
-```json
-{
-  "mcpServers": {
-    "lerian": {
-      "command": "npm",
-      "args": ["exec", "@lerianstudio/lerian-mcp-server@latest"]
-    }
-  }
-}
-```
+---
 
 ## ✨ What You Get
 
-Once connected, you can ask your AI assistant:
+**ONE powerful tool for ALL 5 Lerian products:**
 
-- 📚 **"Explain how Lerian accounts work"**
-- 🔧 **"Show me how to create a transaction"**
-- 🏗️ **"What's the difference between onboarding and transaction APIs?"**
-- 💡 **"Generate Go code for creating an organization"**
-- 🐛 **"Help me debug this Lerian integration error"**
-- 📊 **"What data models does Lerian use?"**
+### 📦 Supported Products
+- **Midaz** - Financial ledger system with double-entry accounting
+- **Tracer** - Observability and distributed tracing platform
+- **Flowker** - Workflow orchestration engine
+- **Reporter** - Reporting and analytics platform
+- **All** - Cross-product search and comparison
 
-## 🧙‍♂️ Enhanced Workflow Prompts
+### 🎯 Operations
 
-**NEW!** Interactive wizards and troubleshooting assistants:
+#### 📚 Documentation (`operation: "docs"`)
+Get comprehensive documentation for any product:
+```
+"Show me Midaz transaction documentation"
+"Explain Tracer's observability features"
+"How does Flowker workflow orchestration work?"
+```
 
-### Basic Workflows
-- 🎯 **`create-transaction-wizard`** - Step-by-step transaction creation
-- 🔍 **`debug-my-balance`** - Balance troubleshooting with context
-- 🏗️ **`setup-my-org`** - Organization setup wizard
-- 📊 **`explain-my-data`** - Smart data analysis and insights
-- 🚀 **`help-me-start`** - Quick start guide
-- 🔧 **`help-with-api`** - API-specific guidance
-- 📚 **`help-me-learn`** - Personalized learning paths
+#### 🎓 Learning (`operation: "learn"`)
+Interactive tutorials adapted to your experience level:
+```
+"I'm a beginner, teach me about Midaz"
+"Advanced guide to Tracer integration"
+"Flowker workflows for intermediate developers"
+```
 
-### Advanced Intelligence (NEW!)
-- 📄 **`check-file-balances`** - Multi-format file analysis (CSV/TXT/JSON) with smart UUID extraction
-- 💰 **`check-external-balance`** - External account balance checking by asset (USD, EUR, BTC, etc.)
-- 🔍 **`discover-lerian-hierarchy`** - Explore complete org → ledger → asset → account chains
-- 🛠️ **`show-all-tools`** - Complete catalog of all tools, operations, and parameters
+#### 💻 SDK Generation (`operation: "sdk"`)
+Production-ready code in 3 languages:
+```
+"Generate Go code for Midaz transaction creation"
+"TypeScript SDK example for Reporter analytics"
+"JavaScript code for Flowker workflow execution"
+```
 
-**Enhanced Features:**
-- **File Format Support:** Automatic detection of CSV, TXT, and JSON files
-- **Smart UUID Extraction:** Intelligent parsing with optional LLM confirmation for TXT files
-- **External Balance Monitoring:** Check system-level asset balances and liquidity
-- **Business Intelligence:** Asset distribution analysis and treasury management insights
+#### 🔍 Search (`operation: "search"`)
+Find anything across all products:
+```
+"Search all products for authentication docs"
+"Find transaction examples across Lerian"
+```
 
-**Usage:** *"Use check-file-balances to analyze my accounts.txt file"* or *"Use check-external-balance to see USD liquidity"*
+---
 
-## 🆘 Need Help?
+## 🚀 Example Conversations
 
-### Not Working?
+### Getting Started
+**You:** *"What can you tell me about Lerian Midaz?"*
+**AI:** *Uses `lerian` tool with product="midaz", operation="docs"*
+→ Gets comprehensive Midaz documentation, explains core concepts
 
-1. **Restart your AI app** after adding the configuration
-2. **Check the file location** - make sure you edited the right config file
-3. **Try the basic test**: Ask your AI "Can you access Lerian documentation?"
+### Learning Path
+**You:** *"I'm new to Tracer, how do I get started?"*
+**AI:** *Uses `lerian` tool with product="tracer", operation="learn", topic="getting-started"*
+→ Provides beginner-friendly tutorial with step-by-step guidance
 
-### Still Having Issues?
+### Code Generation
+**You:** *"Show me Go code for creating a Midaz ledger"*
+**AI:** *Uses `lerian` tool with product="midaz", operation="sdk", language="go"*
+→ Generates production-ready Go code with comments and best practices
 
-- **Claude Desktop Users**: Verify MCP is enabled in your Claude Desktop version
-- **All Users**: Make sure you have Node.js installed on your computer
-- **Get Support**: [GitHub Issues](https://github.com/lerianstudio/lerian-mcp-server/issues)
+### Cross-Product Search
+**You:** *"How do the different Lerian products handle authentication?"*
+**AI:** *Uses `lerian` tool with product="all", operation="search", topic="authentication"*
+→ Searches across all products, provides comparison
 
-### 🔄 Migration Help
+---
 
-**Migrating from Midaz MCP Server?**
-- Both `@lerianstudio/midaz-mcp-server` and `@lerianstudio/lerian-mcp-server` work identically
-- All environment variables work with both `MIDAZ_*` and `LERIAN_*` prefixes
-- Configuration files work in both `.midaz` and `.lerian` directories
-- Commands `midaz-mcp-server` and `lerian-mcp-server` are equivalent
+## 🎯 The ONE Tool
 
-**Recommended Migration Steps:**
-1. Update your MCP configuration to use `@lerianstudio/lerian-mcp-server`
-2. Restart your AI assistant
-3. Optionally update environment variables from `MIDAZ_*` to `LERIAN_*`
-4. Optionally move config files from `.midaz/` to `.lerian/` directories
+The entire MCP server is built around a single, intelligent tool:
+
+```
+Tool: lerian
+
+Parameters:
+  product    - midaz | tracer | flowker | reporter | all
+  operation  - docs | learn | sdk | search
+  topic      - What you want to know about (optional)
+  language   - go | typescript | javascript (for SDK operation)
+  useCase    - Specific use case (optional, for SDK)
+
+Example:
+{
+  "product": "midaz",
+  "operation": "learn",
+  "topic": "transactions"
+}
+```
+
+**Why ONE tool?**
+- 🎯 Simple to discover and use
+- 🔄 Consistent experience across all products
+- 🚀 Easy for AI to understand
+- 📦 Minimal context usage
+- ⚡ Fast and efficient
+
+---
+
+## 💡 Key Features
+
+### ✅ Zero Configuration
+- Auto-generates required secrets on first run
+- Stores in `~/.lerian/secrets.json` (secure, persistent)
+- Works immediately with `npx` - no manual setup
+
+### ✅ All Products, One Interface
+- Unified access to Midaz, Tracer, Flowker, Reporter
+- Cross-product search and comparison
+- Consistent documentation format
+
+### ✅ Smart Documentation
+- Auto-loads from `docs.lerian.studio/llms.txt`
+- Always up-to-date with latest docs
+- Rich formatting optimized for AI understanding
+
+### ✅ Multi-Language SDK
+- Go (backend services)
+- TypeScript (type-safe web)
+- JavaScript (Node.js/browser)
+- Production-ready code with best practices
+
+### ✅ Experience-Based Learning
+- Beginner-friendly tutorials
+- Intermediate deep-dives
+- Advanced patterns and architecture
+- Role-specific guidance (developer/admin/business)
+
+---
 
 ## 🔒 Safe & Secure
 
-- ✅ Read-only access (can't modify your data)
-- ✅ No API keys required for basic usage
-- ✅ All data stays on your computer
-- ✅ Open source and auditable
+- ✅ **No API access** - Documentation only, can't execute operations
+- ✅ **All local** - Documentation cached on your machine
+- ✅ **Zero vulnerabilities** - Comprehensive security audit completed
+- ✅ **Auto-secret generation** - Cryptographic keys auto-managed
+- ✅ **Open source** - Fully auditable code
 
-## ⚙️ Configuration
+---
 
-### Environment Variables
+## 📖 Documentation
 
-Configure the server behavior with these optional environment variables:
+### Quick Links
+- 📚 [Full Documentation](https://docs.lerian.studio)
+- 🎓 [Learning Paths](https://docs.lerian.studio/learn)
+- 💻 [SDK Reference](https://docs.lerian.studio/sdks)
+- 🐛 [Troubleshooting](https://docs.lerian.studio/troubleshooting)
 
-**Logging Configuration:**
-- `ERROR_LOGGING=true` - Enable error logging to files (default: disabled)
-- `PERFORMANCE_TRACKING=true` - Enable performance tracking logs (default: disabled)
-- `AUDIT_LOGGING=true` - Enable security audit logging (default: disabled)
+### For Developers
+- 🔧 [Makefile Commands](Makefile) - `make help` for all commands
+- 🧪 [Testing Guide](test/README.md)
+- 📊 [Architecture](CLAUDE.md)
+- 🔐 [Security](SECURITY_REMEDIATION_SUMMARY.md)
 
-**Note:** All logging is **disabled by default** to prevent log file growth. Enable only if needed for debugging or monitoring.
+---
 
-**Example Claude Desktop configuration with logging:**
+## 🛠️ Advanced Usage
+
+### Custom Documentation URL
+
 ```json
 {
   "mcpServers": {
     "lerian": {
       "command": "npx",
-      "args": ["@lerianstudio/lerian-mcp-server@latest"],
+      "args": ["-y", "@lerianstudio/lerian-mcp-server@latest"],
       "env": {
-        "ERROR_LOGGING": "true",
-        "PERFORMANCE_TRACKING": "true"
+        "LERIAN_DOCS_URL": "https://your-custom-docs.example.com"
       }
     }
   }
 }
 ```
 
-**Log Management:**
-- Log files are stored in `./logs/` directory
-- Automatic rotation when files exceed 10MB
-- Old logs are cleaned up after 7 days
-- Manual cleanup: delete the `logs/` directory
+### Enable Logging
 
-## 🛠️ Development & Contributing
-
-### **Quick Start for Developers**
-```bash
-# Setup and run locally
-make setup                    # Initial project setup
-make dev                      # Start development server
-
-# Before committing (matches CI/CD exactly)
-make ci-all                   # Run complete CI pipeline locally
+```json
+{
+  "mcpServers": {
+    "lerian": {
+      "command": "npx",
+      "args": ["-y", "@lerianstudio/lerian-mcp-server@latest"],
+      "env": {
+        "ERROR_LOGGING": "true",
+        "PERFORMANCE_TRACKING": "true",
+        "LOG_LEVEL": "debug"
+      }
+    }
+  }
+}
 ```
 
-### **Available Commands**
-- **`make ci-all`** - Run complete CI/CD pipeline locally (recommended before commits)
-- **`make docs-serve`** - Generate and serve documentation locally
-- **`make typecheck`** - TypeScript type checking
-- **`make audit`** - Security vulnerability scan
-
-### **Documentation**
-- 📊 [System Architecture Diagrams](diagrams/README.md) - Visual system documentation
+Logs are stored in `./logs/` directory.
 
 ---
 
-**Ready to get started?** Copy the configuration for your AI assistant above and restart the app! 🚀
+## 🆘 Troubleshooting
+
+### Server Not Starting?
+
+1. **Check Node.js version:** Requires Node.js 18+
+   ```bash
+   node --version  # Should show v18 or higher
+   ```
+
+2. **Test manually:**
+   ```bash
+   npx -y @lerianstudio/lerian-mcp-server
+   ```
+
+3. **Check secrets:**
+   ```bash
+   ls -la ~/.lerian/secrets.json
+   ```
+
+### Tool Not Responding?
+
+1. **Restart your AI assistant** after changing configuration
+2. **Verify MCP is enabled** in your AI assistant's settings
+3. **Check logs** (if enabled): `./logs/error.log`
+
+### Getting Help
+
+- 🐛 [GitHub Issues](https://github.com/lerianstudio/lerian-mcp-server/issues)
+- 💬 [Lerian Community](https://community.lerian.studio)
+- 📖 [Documentation](https://docs.lerian.studio/mcp)
+
+---
+
+## 📦 Package Information
+
+**npm Package:** `@lerianstudio/lerian-mcp-server`
+**Version:** 4.0.0 (Documentation-Only Mode)
+**License:** Apache-2.0
+**Repository:** [GitHub](https://github.com/lerianstudio/lerian-mcp-server)
+
+### Migration from v3.x
+
+Version 4.0.0 is a **major breaking change** that removes all API connectivity.
+
+**What's Removed:**
+- ❌ All 18 financial API tools
+- ❌ Backend service connectivity
+- ❌ Live data queries
+
+**What You Gain:**
+- ✅ Focused documentation experience
+- ✅ 5 products in ONE tool
+- ✅ Faster, simpler, more reliable
+- ✅ Zero configuration required
+
+**Need API access?** Use [Lerian SDKs](https://docs.lerian.studio/sdks) directly in your application.
+
+See [MIGRATION-V4.md](MIGRATION-V4.md) for full migration guide.
+
+---
+
+## 🏗️ Architecture
+
+**The Ultimate Simplification:**
+- **Tool Count:** 1 (down from 23!)
+- **Products:** 5 (midaz, tracer, flowker, reporter, all)
+- **Operations:** 4 (docs, learn, sdk, search)
+- **Languages:** 3 (Go, TypeScript, JavaScript)
+- **Data Source:** docs.lerian.studio/llms.txt (auto-updated)
+
+**Layers:**
+1. Infrastructure - Config, logging, security
+2. Transport - MCP stdio protocol
+3. Protocol - Message handling, cursors
+4. Client Adaptation - Response formatting
+5. Tool - Single unified lerian tool
+6. Business Logic - Documentation workflows
+
+**No API/Integration layer** - Pure documentation MCP ✅
+
+---
+
+## 🌟 Why This MCP?
+
+### For AI Users
+- 🎯 **One tool, everything** - No complexity, just ask
+- 📚 **Always current** - Auto-updates from official docs
+- 🎓 **Learn by doing** - Interactive tutorials
+- 💻 **Copy-paste code** - Production-ready examples
+
+### For Developers
+- ⚡ **Zero setup** - Just `npx` and go
+- 🔒 **Secure by default** - No credentials needed
+- 🪶 **Lightweight** - Minimal dependencies
+- 🔧 **Just works** - Auto-generates secrets
+
+### For Organizations
+- 📖 **Single source of truth** - Official Lerian documentation
+- 🚀 **Faster onboarding** - AI-assisted learning
+- ✅ **Best practices** - Built into examples
+- 🔐 **Safe** - Read-only, can't modify data
+
+---
+
+**Ready to explore Lerian with AI?** Install now and ask your first question! 🚀
+
+```bash
+# That's it! Just add to your AI's config and restart
+npx -y @lerianstudio/lerian-mcp-server
+```
