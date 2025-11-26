@@ -85,12 +85,12 @@ async function runTest() {
     try {
         await startServer();
         console.log(`${colors.green}${colors.bold}Basic server test passed!${colors.reset}`);
+        stopServer();
         process.exit(0);
     } catch (error) {
         console.error(`${colors.red}Test error: ${error.message}${colors.reset}`);
-        process.exit(1);
-    } finally {
         stopServer();
+        process.exit(1);
     }
 }
 

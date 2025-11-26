@@ -5,7 +5,7 @@
  * instead of reading local markdown files.
  */
 
-import { enhancedFetch } from './http-client.js';
+import fetch from 'node-fetch';
 import { createLogger } from './mcp-logging.js';
 import config from '../config.js';
 import { getResourceUrl, initializeManifest } from './docs-manifest.js';
@@ -116,14 +116,19 @@ export async function fetchDocumentation(resourcePath) {
   logger.info('Fetching documentation', { resource: resourcePath, url: fullUrl });
   
   try {
-    // Fetch the documentation page
-    const response = await enhancedFetch(fullUrl, {
+    // Fetch the documentation page with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    const response = await fetch(fullUrl, {
       headers: {
         'Accept': 'text/html,application/xhtml+xml,text/markdown,text/plain',
         'User-Agent': 'Lerian-MCP-Server/1.0'
       },
-      timeout: 10000
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
     
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
