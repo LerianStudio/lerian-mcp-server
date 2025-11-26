@@ -1,3 +1,5 @@
+# [3.0.0](https://github.com/lerianstudio/lerian-mcp-server/compare/v2.38.0...v3.0.0) (2025-11-26)
+
 # [2.38.0](https://github.com/lerianstudio/lerian-mcp-server/compare/v2.37.0...v2.38.0) (2025-11-25)
 
 
