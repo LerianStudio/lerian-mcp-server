@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { routeAndExecute } from '../api/router.js';
-import { createToolResponse, createErrorResponse, wrapToolHandler, ERROR_CODES } from '../util/mcp-helpers.js';
+import { createToolResponse, createErrorResponse, wrapToolHandler, ErrorCodes } from '../util/mcp-helpers.js';
 
 const executeInputSchema = {
   resource: z.string().describe('Resource name (e.g. "organizations", "transactions", "holders", "balances")'),
@@ -15,7 +15,7 @@ async function handleExecute(args) {
 
   if (!resource || !action) {
     return createErrorResponse(
-      ERROR_CODES.INVALID_PARAMS,
+      ErrorCodes.INVALID_PARAMS,
       'Both resource and action are required. Use midaz-discover first to find available resources and actions.'
     );
   }
@@ -40,33 +40,33 @@ async function handleExecute(args) {
       };
 
       if (err.status === 400) {
-        return createErrorResponse(ERROR_CODES.INVALID_PARAMS, `Bad request: ${JSON.stringify(err.body)}`, errorDetail);
+        return createErrorResponse(ErrorCodes.INVALID_PARAMS, `Bad request: ${JSON.stringify(err.body)}`, errorDetail);
       }
       if (err.status === 401 || err.status === 403) {
-        return createErrorResponse(ERROR_CODES.RESOURCE_ACCESS_DENIED, `Authentication/authorization error (${err.status}). Check MIDAZ_AUTH_TOKEN configuration.`, errorDetail);
+        return createErrorResponse(ErrorCodes.RESOURCE_ACCESS_DENIED, `Authentication/authorization error (${err.status}). Check MIDAZ_AUTH_TOKEN configuration.`, errorDetail);
       }
       if (err.status === 404) {
-        return createErrorResponse(ERROR_CODES.RESOURCE_NOT_FOUND, `Resource not found: ${err.url}`, errorDetail);
+        return createErrorResponse(ErrorCodes.RESOURCE_NOT_FOUND, `Resource not found: ${err.url}`, errorDetail);
       }
       if (err.status === 409) {
-        return createErrorResponse(ERROR_CODES.BACKEND_ERROR, `Conflict: ${JSON.stringify(err.body)}`, errorDetail);
+        return createErrorResponse(ErrorCodes.BACKEND_ERROR, `Conflict: ${JSON.stringify(err.body)}`, errorDetail);
       }
       if (err.status >= 500) {
-        return createErrorResponse(ERROR_CODES.BACKEND_ERROR, `Midaz server error (${err.status}): ${JSON.stringify(err.body)}`, errorDetail);
+        return createErrorResponse(ErrorCodes.BACKEND_ERROR, `Midaz server error (${err.status}): ${JSON.stringify(err.body)}`, errorDetail);
       }
 
-      return createErrorResponse(ERROR_CODES.BACKEND_ERROR, `API error (${err.status}): ${err.message}`, errorDetail);
+      return createErrorResponse(ErrorCodes.BACKEND_ERROR, `API error (${err.status}): ${err.message}`, errorDetail);
     }
 
     if (err.name === 'TimeoutError' || err.message.includes('timeout')) {
-      return createErrorResponse(ERROR_CODES.BACKEND_ERROR, `Request timed out. Check if the Midaz service is running and MIDAZ_*_URL is configured correctly.`);
+      return createErrorResponse(ErrorCodes.BACKEND_ERROR, `Request timed out. Check if the Midaz service is running and MIDAZ_*_URL is configured correctly.`);
     }
 
     if (err.message.includes('fetch failed') || err.message.includes('ECONNREFUSED')) {
-      return createErrorResponse(ERROR_CODES.RESOURCE_UNAVAILABLE, `Cannot connect to Midaz API. Ensure the service is running and environment variables MIDAZ_ONBOARDING_URL, MIDAZ_TRANSACTION_URL, MIDAZ_CRM_URL, MIDAZ_LEDGER_URL are set correctly.`);
+      return createErrorResponse(ErrorCodes.RESOURCE_UNAVAILABLE, `Cannot connect to Midaz API. Ensure the service is running and environment variables MIDAZ_ONBOARDING_URL, MIDAZ_TRANSACTION_URL, MIDAZ_CRM_URL, MIDAZ_LEDGER_URL are set correctly.`);
     }
 
-    return createErrorResponse(ERROR_CODES.INTERNAL_ERROR, err.message);
+    return createErrorResponse(ErrorCodes.INTERNAL_ERROR, err.message);
   }
 }
 

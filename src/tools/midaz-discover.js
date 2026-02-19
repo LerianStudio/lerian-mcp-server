@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { getSchema, findSchemas, listResources, getSchemasByComponent } from '../api/schemas/index.js';
 import { resolveAction, getEndpointCount } from '../api/router.js';
-import { createToolResponse, createErrorResponse, wrapToolHandler, ERROR_CODES } from '../util/mcp-helpers.js';
+import { createToolResponse, createErrorResponse, wrapToolHandler, ErrorCodes } from '../util/mcp-helpers.js';
 
 const discoverInputSchema = {
   intent: z.enum(['list-resources', 'describe-resource', 'describe-action', 'search', 'list-by-component']).describe(
@@ -35,12 +35,12 @@ async function handleDiscover(args) {
 
     case 'describe-resource': {
       if (!resource) {
-        return createErrorResponse(ERROR_CODES.INVALID_PARAMS, 'resource parameter is required for describe-resource intent');
+        return createErrorResponse(ErrorCodes.INVALID_PARAMS, 'resource parameter is required for describe-resource intent');
       }
       const schema = getSchema(resource);
       if (!schema) {
         const suggestions = findSchemas(resource);
-        return createErrorResponse(ERROR_CODES.RESOURCE_NOT_FOUND, `Resource "${resource}" not found.${suggestions.length > 0 ? ` Did you mean: ${suggestions.map(s => s.resource).join(', ')}?` : ''}`);
+        return createErrorResponse(ErrorCodes.RESOURCE_NOT_FOUND, `Resource "${resource}" not found.${suggestions.length > 0 ? ` Did you mean: ${suggestions.map(s => s.resource).join(', ')}?` : ''}`);
       }
       const actions = {};
       for (const [actionName, actionDef] of Object.entries(schema.actions)) {
@@ -64,11 +64,11 @@ async function handleDiscover(args) {
 
     case 'describe-action': {
       if (!resource || !action) {
-        return createErrorResponse(ERROR_CODES.INVALID_PARAMS, 'Both resource and action parameters are required for describe-action intent');
+        return createErrorResponse(ErrorCodes.INVALID_PARAMS, 'Both resource and action parameters are required for describe-action intent');
       }
       const resolved = resolveAction(resource, action);
       if (resolved.error) {
-        return createErrorResponse(ERROR_CODES.RESOURCE_NOT_FOUND, resolved.error);
+        return createErrorResponse(ErrorCodes.RESOURCE_NOT_FOUND, resolved.error);
       }
       return createToolResponse({
         resource,
@@ -87,7 +87,7 @@ async function handleDiscover(args) {
 
     case 'search': {
       if (!query) {
-        return createErrorResponse(ERROR_CODES.INVALID_PARAMS, 'query parameter is required for search intent');
+        return createErrorResponse(ErrorCodes.INVALID_PARAMS, 'query parameter is required for search intent');
       }
       const results = findSchemas(query);
       if (results.length === 0) {
@@ -106,7 +106,7 @@ async function handleDiscover(args) {
 
     case 'list-by-component': {
       if (!component) {
-        return createErrorResponse(ERROR_CODES.INVALID_PARAMS, 'component parameter is required for list-by-component intent');
+        return createErrorResponse(ErrorCodes.INVALID_PARAMS, 'component parameter is required for list-by-component intent');
       }
       const schemas = getSchemasByComponent(component);
       return createToolResponse({
@@ -120,7 +120,7 @@ async function handleDiscover(args) {
     }
 
     default:
-      return createErrorResponse(ERROR_CODES.INVALID_PARAMS, `Unknown intent: ${intent}`);
+      return createErrorResponse(ErrorCodes.INVALID_PARAMS, `Unknown intent: ${intent}`);
   }
 }
 
