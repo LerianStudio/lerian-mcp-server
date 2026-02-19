@@ -1,27 +1,30 @@
 /**
  * Configuration management for the Lerian MCP server
  * Handles environment variables, config files, and default settings
- * DOCUMENTATION-ONLY MODE: Backend API configuration removed
  */
 
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
-/**
- * Default configuration for the Lerian MCP server
- * Documentation and learning resources only
- */
 const defaultConfig = {
     server: {
         name: 'lerian-mcp-server',
-        version: '4.0.0',
-        description: 'Lerian MCP Server - Documentation and Learning Resources'
+        version: '5.0.0',
+        description: 'Lerian MCP Server - Documentation, Learning & API'
     },
-    docsUrl: 'https://docs.lerian.studio', // Base URL for online documentation
-    logLevel: 'info', // Default log level
-    detailedLogs: false, // Detailed logging (disabled by default)
-    consoleLogs: false, // Console logging (disabled by default)
+    docsUrl: 'https://docs.lerian.studio',
+    logLevel: 'info',
+    detailedLogs: false,
+    consoleLogs: false,
+    midazApi: {
+        onboardingUrl: 'http://localhost:3000',
+        transactionUrl: 'http://localhost:3001',
+        crmUrl: 'http://localhost:3002',
+        ledgerUrl: 'http://localhost:3003',
+        authToken: '',
+        timeout: 30000,
+    },
 };
 
 // Config file locations to try (in order of preference)
@@ -139,14 +142,25 @@ async function loadConfig() {
         }
     }
 
-    // Try to load from environment variables next
     const envConfig = {
         ...(process.env.LERIAN_LOG_LEVEL && { logLevel: process.env.LERIAN_LOG_LEVEL }),
         ...(process.env.LERIAN_DETAILED_LOGS !== undefined && { detailedLogs: process.env.LERIAN_DETAILED_LOGS === 'true' }),
         ...(process.env.LERIAN_CONSOLE_LOGS !== undefined && { consoleLogs: process.env.LERIAN_CONSOLE_LOGS === 'true' }),
-        // Backward compatibility with MIDAZ_ prefix
         ...(process.env.MIDAZ_LOG_LEVEL && { logLevel: process.env.MIDAZ_LOG_LEVEL }),
     };
+
+    const midazEnv = {
+        ...(process.env.MIDAZ_ONBOARDING_URL && { onboardingUrl: process.env.MIDAZ_ONBOARDING_URL }),
+        ...(process.env.MIDAZ_TRANSACTION_URL && { transactionUrl: process.env.MIDAZ_TRANSACTION_URL }),
+        ...(process.env.MIDAZ_CRM_URL && { crmUrl: process.env.MIDAZ_CRM_URL }),
+        ...(process.env.MIDAZ_LEDGER_URL && { ledgerUrl: process.env.MIDAZ_LEDGER_URL }),
+        ...(process.env.MIDAZ_AUTH_TOKEN && { authToken: process.env.MIDAZ_AUTH_TOKEN }),
+        ...(process.env.MIDAZ_API_TIMEOUT && { timeout: parseInt(process.env.MIDAZ_API_TIMEOUT, 10) }),
+    };
+
+    if (Object.keys(midazEnv).length > 0) {
+        envConfig.midazApi = { ...defaultConfig.midazApi, ...midazEnv };
+    }
 
     // Only use environment config if at least one value is set
     const hasEnvConfig = Object.keys(envConfig).length > 0;
@@ -229,4 +243,4 @@ function validateConfigPath(configPath) {
     return true;
 }
 
-export default await configPromise; 
+export default await configPromise;  

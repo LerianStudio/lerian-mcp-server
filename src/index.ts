@@ -15,6 +15,10 @@ import { initializeSecrets, displaySecretsInfo } from './util/secret-manager.js'
 // Import THE unified Lerian tool (all products, all operations in ONE tool)
 import { registerLerianTool } from './tools/lerian.js';
 
+// Import Progressive Disclosure API tools
+import { registerDiscoverTool } from './tools/midaz-discover.js';
+import { registerExecuteTool } from './tools/midaz-execute.js';
+
 // Import discovery prompts
 import { registerDiscoveryPrompts } from './prompts/tool-discovery.js';
 import { registerWorkflowPrompts } from './prompts/midaz-workflows.js';
@@ -48,19 +52,16 @@ const main = async () => {
     await initializeManifest();
     logConfigEvent('docs_manifest_initialized');
 
-    // Collect all capabilities (documentation-only mode)
     const capabilities = {
-      resources: false, // Completely removed
+      resources: false,
       tools: {
-        // Documentation & Learning (2 unified tools)
         unifiedDocumentation: true,
         unifiedLearning: true,
-        // SDK Tools (3 tools: generate, compare, find-examples)
         sdk: true,
-        // Monitoring (3 tools: health, errors, performance)
-        statusMonitoring: true
+        statusMonitoring: true,
+        midazApi: true,
       },
-      prompts: true, // Enable tool discovery prompts
+      prompts: true,
       logging: true
     };
 
@@ -80,21 +81,23 @@ const main = async () => {
     logLifecycleEvent('starting', { version: '2.5.1', capabilities });
     logger.info('Server initialization started', { version: '2.5.1' });
 
-    // Register THE SINGLE unified Lerian tool (all products, all operations)
     registerLerianTool(server);
-    logger.info('✅ Unified Lerian tool registered - 1 tool for all 5 products');
+    logger.info('Unified Lerian tool registered');
 
-    // Register discovery prompts
+    registerDiscoverTool(server);
+    logger.info('midaz-discover tool registered');
+
+    registerExecuteTool(server);
+    logger.info('midaz-execute tool registered');
+
     registerDiscoveryPrompts(server);
-    logger.info('✅ Discovery prompts registered - helps users find and use tools');
+    logger.info('Discovery prompts registered');
 
-    // Register workflow prompts
     registerWorkflowPrompts(server);
-    logger.info('✅ Workflow prompts registered - contextual wizards and troubleshooting');
+    logger.info('Workflow prompts registered');
 
-    // Register advanced prompts
     registerAdvancedPrompts(server);
-    logger.info('✅ Advanced prompts registered - CSV analysis, hierarchy discovery, tools catalog');
+    logger.info('Advanced prompts registered');
 
     // Fix prompt list handler to work around Zod compatibility issue
     server.server.setRequestHandler(ListPromptsRequestSchema, () => {
@@ -198,10 +201,9 @@ const main = async () => {
         return { prompts: [] };
       }
     });
-    logger.info('✅ Prompt list handler override applied');
+    logger.info('Prompt list handler override applied');
 
-    // Total: 1 unified tool (ultimate simplification!)
-    logger.info('🎯 Total tools: 1 (lerian tool - handles all products and operations)');
+    logger.info('Total tools: 3 (lerian, midaz-discover, midaz-execute)');
 
     // Connect to stdio transport
     const transport = new StdioServerTransport();
@@ -298,4 +300,4 @@ main().catch((error: unknown) => {
   );
 
   process.exit(1);
-}); 
+});  
