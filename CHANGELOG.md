@@ -1,3 +1,15 @@
+# [3.2.0](https://github.com/lerianstudio/lerian-mcp-server/compare/v3.1.0...v3.2.0) (2026-02-20)
+
+
+### Bug Fixes
+
+* use correct ErrorCodes export name from mcp-helpers ([162bebc](https://github.com/lerianstudio/lerian-mcp-server/commit/162bebc5cbf3994935f32fe220d39dfd70424e51))
+
+
+### Features
+
+* add Progressive Disclosure API architecture (midaz-discover + midaz-execute) ([5558c40](https://github.com/lerianstudio/lerian-mcp-server/commit/5558c4047b256c7c93d070064dbc3f41557aaf25))
+
 # [3.1.0](https://github.com/lerianstudio/lerian-mcp-server/compare/v3.0.0...v3.1.0) (2025-11-26)
 
 # [3.0.0](https://github.com/lerianstudio/lerian-mcp-server/compare/v2.38.0...v3.0.0) (2025-11-26)
