@@ -89,7 +89,7 @@
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/commit-analyzer": "^13.0.1",
     "@semantic-release/git": "^10.0.1",
-    "@semantic-release/github": "^11.0.6",
+    "@semantic-release/github": "^12.0.6",
     "@semantic-release/release-notes-generator": "^14.1.0",
     "@types/node": "^22.19.17",
     "@typescript-eslint/eslint-plugin": "^8.58.0",
@@ -100,7 +100,7 @@
     "ts-node": "^10.9.2",
     "typedoc": "^0.28.18",
     "typescript": "^5.9.3",
-    "zod": "^3.25.76"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@semantic-release/npm": "^13.1.5",
