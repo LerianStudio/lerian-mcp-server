@@ -1,3 +1,10 @@
+# [3.5.0](https://github.com/lerianstudio/lerian-mcp-server/compare/v3.4.0...v3.5.0) (2026-04-28)
+
+
+### Features
+
+* **portfolio:** add live product API surface ([f3ebef2](https://github.com/lerianstudio/lerian-mcp-server/commit/f3ebef26a286bfd44e7015d6b6c26357810037e4))
+
 # [3.4.0](https://github.com/lerianstudio/lerian-mcp-server/compare/v3.3.0...v3.4.0) (2026-04-04)
 
 # [3.3.0](https://github.com/lerianstudio/lerian-mcp-server/compare/v3.2.0...v3.3.0) (2026-04-04)
