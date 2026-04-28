@@ -58,7 +58,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "22"
           registry-url: "https://registry.npmjs.org"
           scope: "@lerianstudio"
 
@@ -126,7 +126,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "22"
           registry-url: "https://npm.pkg.github.com"
           scope: "@lerianstudio"
 
@@ -161,7 +161,7 @@ jobs:
     if: github.event_name == 'release'
     steps:
       - name: Update release notes
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const version = '${{ needs.validate-release.outputs.version }}';

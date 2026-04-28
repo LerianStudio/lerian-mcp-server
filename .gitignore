@@ -17,6 +17,10 @@ build/
 
 # Midaz MCP Config JSON
 midaz-mcp-config.json
+lerian-mcp-config.json
+
+# Generated review artifacts
+docs/codereview/
 
 # Logs
 logs

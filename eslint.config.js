@@ -11,6 +11,16 @@ export default [
         ignores: ['dist/**/*', 'node_modules/**/*', '**/*.d.ts']
     },
     {
+        files: ['**/*.js'],
+        languageOptions: {
+            ecmaVersion: 'latest',
+            sourceType: 'module',
+        },
+        rules: {
+            'no-console': 'off',
+        },
+    },
+    {
         files: ['**/*.ts'],
         languageOptions: {
             parser: tsparser,

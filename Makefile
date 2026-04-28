@@ -1,11 +1,11 @@
-# Midaz MCP Server - Makefile
+# Lerian MCP Server - Makefile
 # Automates setup, configuration, and running of the MCP server
 
-.PHONY: help setup build start dev test test-security secrets secrets-status lint clean install demo validate docs docs-serve docs-clean typecheck audit ci-install ci-lint ci-test ci-audit ci-all
+.PHONY: help setup build start dev test test-security secrets secrets-status lint clean install demo validate docs docs-serve docs-clean typecheck audit ci-install ci-lint ci-test ci-audit ci-all ci
 
 # Default target
 help:
-	@echo "🚀 Midaz MCP Server - Available Commands"
+	@echo "🚀 Lerian MCP Server - Available Commands"
 	@echo "========================================"
 	@echo ""
 	@echo "📋 Setup & Configuration:"
@@ -48,16 +48,17 @@ help:
 	@echo "  validate        Validate that setup process works"
 	@echo ""
 	@echo "🔧 Environment Variables:"
-	@echo "  MIDAZ_LOG_LEVEL=debug|info|warning|error"
-	@echo "  MIDAZ_CONSOLE_LOGS=true|false"
-	@echo "  MIDAZ_DETAILED_LOGS=true|false"
+	@echo "  LERIAN_LOG_LEVEL=debug|info|warning|error"
+	@echo "  LERIAN_CONSOLE_LOGS=true|false"
+	@echo "  LERIAN_DETAILED_LOGS=true|false"
+	@echo "  *_BASE_URL / *_MANAGER_URL configure live product APIs"
 	@echo ""
 	@echo "📖 Examples:"
 	@echo "  make setup                    # Initial project setup"
 	@echo "  make dev                      # Start development server"
 	@echo "  make ci-all                   # Run complete CI pipeline locally"
 	@echo "  make docs-serve               # Generate and serve documentation"
-	@echo "  MIDAZ_LOG_LEVEL=debug make start  # Start with debug logging"
+	@echo "  LERIAN_LOG_LEVEL=debug make start  # Start with debug logging"
 
 # Setup project from scratch
 setup: config install build

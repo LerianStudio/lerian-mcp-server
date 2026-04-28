@@ -26,10 +26,6 @@ jobs:
     
     permissions:
       contents: read
-      security-events: write
-      actions: read
-      pull-requests: write
-      issues: write
 
     steps:
       - name: Checkout code
@@ -40,7 +36,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
@@ -74,7 +70,7 @@ jobs:
           
       - name: Upload Semgrep results
         if: github.event.inputs.audit_level == 'comprehensive'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: semgrep-results
           path: semgrep-results.json
@@ -82,15 +78,30 @@ jobs:
 
       - name: Upload security reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: security-reports
           path: security-reports/
           retention-days: 30
 
+  security-pr-comment:
+    runs-on: ubuntu-latest
+    needs: security-audit
+    if: github.event_name == 'pull_request' && always()
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Download security reports
+        uses: actions/download-artifact@v6
+        with:
+          name: security-reports
+          path: security-reports/
+
       - name: Comment PR with security summary
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -141,7 +152,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
@@ -172,4 +183,4 @@ jobs:
             
             **Please review the changes and merge if everything looks good.**
           branch: security/automated-updates
-          delete-branch: true 
+          delete-branch: true

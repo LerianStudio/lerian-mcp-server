@@ -42,15 +42,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Install dependencies
         run: npm ci
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Build
         run: npm run build
@@ -155,9 +151,9 @@ jobs:
             Both packages are functionally identical, but the old package is deprecated.
             
             ### ✨ Features
-            - 26 tools available
-            - 10 interactive prompts
-            - Full backward compatibility
-            - Comprehensive documentation and learning system
+            - Portfolio-aware Lerian documentation, learning, SDK examples, and search
+            - Live discover/execute tools for Midaz, Fetcher, Reporter, Matcher, Tracer, Flowker, and Underwriter
+            - Cross-product workflow orchestration through `portfolio-workflow`
+            - Legacy package name is deprecated; new development targets the Lerian package surface
           draft: false
           prerelease: false 
