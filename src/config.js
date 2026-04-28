@@ -7,11 +7,25 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
+const packageMetadata = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+export const SERVER_VERSION = packageMetadata.version || '0.0.0';
+
+const nestedConfigKeys = [
+    'server',
+    'midazApi',
+    'fetcherApi',
+    'reporterApi',
+    'tracerApi',
+    'matcherApi',
+    'flowkerApi',
+    'underwriterApi'
+];
+
 const defaultConfig = {
     server: {
         name: 'lerian-mcp-server',
-        version: '5.0.0',
-        description: 'Lerian MCP Server - Documentation, Learning & API'
+        version: SERVER_VERSION,
+        description: 'Lerian MCP Server - Portfolio Docs, Learning, Live API & Workflows'
     },
     docsUrl: 'https://docs.lerian.studio',
     logLevel: 'info',
@@ -25,24 +39,92 @@ const defaultConfig = {
         authToken: '',
         timeout: 30000,
     },
+    fetcherApi: {
+        managerUrl: 'http://localhost:4006',
+        authToken: '',
+        timeout: 30000,
+    },
+    reporterApi: {
+        managerUrl: 'http://localhost:4005',
+        authToken: '',
+        maxUploadBytes: 10485760,
+        maxDownloadBytes: 10485760,
+        timeout: 30000,
+    },
+    tracerApi: {
+        baseUrl: 'http://localhost:4020',
+        apiKey: '',
+        timeout: 30000,
+    },
+    matcherApi: {
+        baseUrl: 'http://localhost:4018',
+        authToken: '',
+        maxDownloadBytes: 10485760,
+        timeout: 30000,
+    },
+    flowkerApi: {
+        baseUrl: 'http://localhost:4021',
+        authToken: '',
+        apiKey: '',
+        timeout: 30000,
+    },
+    underwriterApi: {
+        baseUrl: 'http://localhost:8080',
+        authToken: '',
+        timeout: 30000,
+    },
 };
 
 // Config file locations to try (in order of preference)
 const configLocations = [
     // Current working directory
+    path.join(process.cwd(), 'lerian-mcp-config.json'),
     path.join(process.cwd(), 'midaz-mcp-config.json'),
 
     // User's home directory
+    path.join(os.homedir(), '.lerian', 'mcp-config.json'),
     path.join(os.homedir(), '.midaz', 'mcp-config.json'),
 
     // User's config directory (platform specific)
+    path.join(os.homedir(), '.config', 'lerian', 'mcp-config.json'),
     path.join(os.homedir(), '.config', 'midaz', 'mcp-config.json'),
 
     // Global config (platform specific)
     ...(process.platform === 'win32'
-        ? [path.join(process.env.PROGRAMDATA || 'C:\\ProgramData', 'Midaz', 'mcp-config.json')]
-        : ['/etc/midaz/mcp-config.json']),
+        ? [
+            path.join(process.env.PROGRAMDATA || 'C:\\ProgramData', 'Lerian', 'mcp-config.json'),
+            path.join(process.env.PROGRAMDATA || 'C:\\ProgramData', 'Midaz', 'mcp-config.json')
+        ]
+        : ['/etc/lerian/mcp-config.json', '/etc/midaz/mcp-config.json']),
 ];
+
+function isPlainObject(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function mergeConfig(...sources) {
+    const merged = {};
+
+    for (const source of sources) {
+        if (!isPlainObject(source)) {
+            continue;
+        }
+
+        for (const [key, value] of Object.entries(source)) {
+            if (nestedConfigKeys.includes(key) && isPlainObject(value)) {
+                merged[key] = {
+                    ...(isPlainObject(merged[key]) ? merged[key] : {}),
+                    ...value
+                };
+                continue;
+            }
+
+            merged[key] = value;
+        }
+    }
+
+    return merged;
+}
 
 /**
  * Parse command line arguments
@@ -93,10 +175,10 @@ function parseCommandLineArgs() {
         configFromArgs.consoleLogs = parsedArgs['console-logs'] === 'true' || parsedArgs['console-logs'] === true;
     }
 
-    if (parsedArgs['config-file']) {
+    if (parsedArgs.config || parsedArgs['config-file']) {
         // This doesn't directly affect the config object,
         // but will be used to load configuration from a specific file
-        configFromArgs._configFile = parsedArgs['config-file'];
+        configFromArgs._configFile = parsedArgs.config || parsedArgs['config-file'];
     }
 
     return configFromArgs;
@@ -125,9 +207,7 @@ async function loadConfig() {
                 const fileConfig = JSON.parse(fileContent);
 
                 loadedConfig = {
-                    ...defaultConfig,
-                    ...fileConfig,
-                    ...argsConfig, // Command line args override file config
+                    ...mergeConfig(defaultConfig, fileConfig, argsConfig),
                     _source: argsConfig._configFile,
                 };
 
@@ -137,15 +217,17 @@ async function loadConfig() {
                 delete loadedConfig._configFile;
                 return loadedConfig;
             }
+            throw new Error(`Config file not found: ${argsConfig._configFile}`);
         } catch (err) {
-            // Error loading config file (silent for MCP protocol)
+            throw new Error(`Failed to load config file ${argsConfig._configFile}: ${err.message}`);
         }
     }
 
     const envConfig = {
-        ...(process.env.LERIAN_LOG_LEVEL && { logLevel: process.env.LERIAN_LOG_LEVEL }),
-        ...(process.env.LERIAN_DETAILED_LOGS !== undefined && { detailedLogs: process.env.LERIAN_DETAILED_LOGS === 'true' }),
-        ...(process.env.LERIAN_CONSOLE_LOGS !== undefined && { consoleLogs: process.env.LERIAN_CONSOLE_LOGS === 'true' }),
+        ...(process.env.LERIAN_DOCS_URL && { docsUrl: process.env.LERIAN_DOCS_URL }),
+        ...((process.env.LERIAN_LOG_LEVEL || process.env.LOG_LEVEL) && { logLevel: process.env.LERIAN_LOG_LEVEL || process.env.LOG_LEVEL }),
+        ...((process.env.LERIAN_DETAILED_LOGS ?? process.env.DETAILED_LOGS) !== undefined && { detailedLogs: (process.env.LERIAN_DETAILED_LOGS ?? process.env.DETAILED_LOGS) === 'true' }),
+        ...((process.env.LERIAN_CONSOLE_LOGS ?? process.env.CONSOLE_LOGS) !== undefined && { consoleLogs: (process.env.LERIAN_CONSOLE_LOGS ?? process.env.CONSOLE_LOGS) === 'true' }),
         ...(process.env.MIDAZ_LOG_LEVEL && { logLevel: process.env.MIDAZ_LOG_LEVEL }),
     };
 
@@ -162,14 +244,73 @@ async function loadConfig() {
         envConfig.midazApi = { ...defaultConfig.midazApi, ...midazEnv };
     }
 
+    const fetcherEnv = {
+        ...(process.env.FETCHER_MANAGER_URL && { managerUrl: process.env.FETCHER_MANAGER_URL }),
+        ...(process.env.FETCHER_AUTH_TOKEN && { authToken: process.env.FETCHER_AUTH_TOKEN }),
+        ...(process.env.FETCHER_API_TIMEOUT && { timeout: parseInt(process.env.FETCHER_API_TIMEOUT, 10) }),
+    };
+
+    if (Object.keys(fetcherEnv).length > 0) {
+        envConfig.fetcherApi = { ...defaultConfig.fetcherApi, ...fetcherEnv };
+    }
+
+    const reporterEnv = {
+        ...(process.env.REPORTER_MANAGER_URL && { managerUrl: process.env.REPORTER_MANAGER_URL }),
+        ...(process.env.REPORTER_AUTH_TOKEN && { authToken: process.env.REPORTER_AUTH_TOKEN }),
+        ...(process.env.REPORTER_API_TIMEOUT && { timeout: parseInt(process.env.REPORTER_API_TIMEOUT, 10) }),
+    };
+
+    if (Object.keys(reporterEnv).length > 0) {
+        envConfig.reporterApi = { ...defaultConfig.reporterApi, ...reporterEnv };
+    }
+
+    const tracerEnv = {
+        ...(process.env.TRACER_BASE_URL && { baseUrl: process.env.TRACER_BASE_URL }),
+        ...(process.env.TRACER_API_KEY && { apiKey: process.env.TRACER_API_KEY }),
+        ...(process.env.TRACER_API_TIMEOUT && { timeout: parseInt(process.env.TRACER_API_TIMEOUT, 10) }),
+    };
+
+    if (Object.keys(tracerEnv).length > 0) {
+        envConfig.tracerApi = { ...defaultConfig.tracerApi, ...tracerEnv };
+    }
+
+    const matcherEnv = {
+        ...(process.env.MATCHER_BASE_URL && { baseUrl: process.env.MATCHER_BASE_URL }),
+        ...(process.env.MATCHER_AUTH_TOKEN && { authToken: process.env.MATCHER_AUTH_TOKEN }),
+        ...(process.env.MATCHER_API_TIMEOUT && { timeout: parseInt(process.env.MATCHER_API_TIMEOUT, 10) }),
+    };
+
+    if (Object.keys(matcherEnv).length > 0) {
+        envConfig.matcherApi = { ...defaultConfig.matcherApi, ...matcherEnv };
+    }
+
+    const flowkerEnv = {
+        ...(process.env.FLOWKER_BASE_URL && { baseUrl: process.env.FLOWKER_BASE_URL }),
+        ...(process.env.FLOWKER_AUTH_TOKEN && { authToken: process.env.FLOWKER_AUTH_TOKEN }),
+        ...(process.env.FLOWKER_API_KEY && { apiKey: process.env.FLOWKER_API_KEY }),
+        ...(process.env.FLOWKER_API_TIMEOUT && { timeout: parseInt(process.env.FLOWKER_API_TIMEOUT, 10) }),
+    };
+
+    if (Object.keys(flowkerEnv).length > 0) {
+        envConfig.flowkerApi = { ...defaultConfig.flowkerApi, ...flowkerEnv };
+    }
+
+    const underwriterEnv = {
+        ...(process.env.UNDERWRITER_BASE_URL && { baseUrl: process.env.UNDERWRITER_BASE_URL }),
+        ...(process.env.UNDERWRITER_AUTH_TOKEN && { authToken: process.env.UNDERWRITER_AUTH_TOKEN }),
+        ...(process.env.UNDERWRITER_API_TIMEOUT && { timeout: parseInt(process.env.UNDERWRITER_API_TIMEOUT, 10) }),
+    };
+
+    if (Object.keys(underwriterEnv).length > 0) {
+        envConfig.underwriterApi = { ...defaultConfig.underwriterApi, ...underwriterEnv };
+    }
+
     // Only use environment config if at least one value is set
     const hasEnvConfig = Object.keys(envConfig).length > 0;
 
     if (hasEnvConfig) {
         loadedConfig = {
-            ...defaultConfig,
-            ...envConfig,
-            ...argsConfig, // Command line args override environment variables
+            ...mergeConfig(defaultConfig, envConfig, argsConfig),
             _source: 'environment',
         };
         configSource = 'environment';
@@ -184,9 +325,7 @@ async function loadConfig() {
                     const fileConfig = JSON.parse(fileContent);
 
                     loadedConfig = {
-                        ...defaultConfig,
-                        ...fileConfig,
-                        ...argsConfig, // Command line args override file config
+                        ...mergeConfig(defaultConfig, fileConfig, argsConfig),
                         _source: configPath,
                     };
 
@@ -203,8 +342,7 @@ async function loadConfig() {
     // Fall back to default config if nothing was loaded
     if (!loadedConfig) {
         loadedConfig = {
-            ...defaultConfig,
-            ...argsConfig, // Apply any command line args over defaults
+            ...mergeConfig(defaultConfig, argsConfig),
             _source: 'default',
         };
     }
@@ -221,7 +359,6 @@ async function loadConfig() {
 export const configPromise = loadConfig();
 export { loadConfig };
 
-// For backward compatibility, export a default that will be resolved
 /**
  * Validate config file path to prevent path traversal attacks
  */
@@ -230,14 +367,13 @@ function validateConfigPath(configPath) {
         return true;
     }
 
-    // Sanitize input to prevent path traversal
-    const sanitizedPath = configPath.replace(/\.\./g, '').replace(/\/\//g, '/');
-    const resolvedPath = path.resolve(sanitizedPath);
-    const allowedDirs = [process.cwd(), '/etc/lerian', '/etc/midaz']; // backward compatibility
-    const isAllowed = allowedDirs.some(dir => resolvedPath.startsWith(path.resolve(dir)));
+    if (configPath.includes('\0')) {
+        throw new Error('Config path contains an invalid null byte');
+    }
 
-    if (!isAllowed) {
-        throw new Error(`Config path not allowed: ${configPath}`);
+    const resolvedPath = path.resolve(configPath);
+    if (path.extname(resolvedPath) !== '.json') {
+        throw new Error('Config file must be a JSON file');
     }
 
     return true;

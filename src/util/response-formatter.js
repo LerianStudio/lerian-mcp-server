@@ -4,7 +4,7 @@
  */
 
 import { createLogger } from './mcp-logging.js';
-import { createToolResponse, createErrorResponse } from './mcp-protocol.js';
+import { createMcpToolResponse, createMcpErrorContent } from './mcp-protocol.js';
 
 const logger = createLogger('response-formatter');
 
@@ -106,10 +106,10 @@ export class ResponseFormatter {
       // Track response size
       this.trackResponseSize(processedData);
 
-      return createToolResponse(processedData);
+      return createMcpToolResponse(processedData);
     } catch (error) {
       logger.error('Response formatting failed', { error: error.message });
-      return createErrorResponse(error);
+      return createMcpErrorContent(error);
     }
   }
 

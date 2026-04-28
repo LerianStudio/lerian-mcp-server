@@ -1,19 +1,13 @@
-/**
- * MCP Protocol compliance utilities
- * Implements proper content types, pagination, subscriptions, and capabilities
- */
+import { createSignedCursor } from './cursor-security.js';
 
-import { EventEmitter } from 'events';
-import { createSignedCursor, verifyAndDecodeCursor } from './cursor-security.js';
+const MAX_TOOL_RESPONSE_CHARS = 1024 * 1024;
 
-// Content type constants
 export const ContentTypes = {
   TEXT: 'text',
   IMAGE: 'image',
   RESOURCE: 'resource'
 };
 
-// MCP Error codes
 export const ErrorCodes = {
   PARSE_ERROR: -32700,
   INVALID_REQUEST: -32600,
@@ -23,290 +17,91 @@ export const ErrorCodes = {
   SERVER_ERROR: -32000
 };
 
-// Resource subscription manager
-class ResourceSubscriptionManager extends EventEmitter {
-  constructor() {
-    super();
-    this.subscriptions = new Map();
+function stringifyResponseData(data) {
+  if (data === null || data === undefined) {
+    return '';
   }
 
-  subscribe(resourceUri, subscriberId) {
-    if (!this.subscriptions.has(resourceUri)) {
-      this.subscriptions.set(resourceUri, new Set());
-    }
-    this.subscriptions.get(resourceUri).add(subscriberId);
-    return true;
+  let text;
+  try {
+    text = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+  } catch (_error) {
+    text = JSON.stringify({ serializationError: true, reason: 'Response could not be serialized safely' }, null, 2);
   }
 
-  unsubscribe(resourceUri, subscriberId) {
-    if (this.subscriptions.has(resourceUri)) {
-      this.subscriptions.get(resourceUri).delete(subscriberId);
-      if (this.subscriptions.get(resourceUri).size === 0) {
-        this.subscriptions.delete(resourceUri);
-      }
-      return true;
-    }
+  if (text.length <= MAX_TOOL_RESPONSE_CHARS) {
+    return text;
+  }
+
+  return JSON.stringify({
+    truncated: true,
+    reason: `Tool response exceeded ${MAX_TOOL_RESPONSE_CHARS} characters`,
+    preview: text.slice(0, MAX_TOOL_RESPONSE_CHARS)
+  }, null, 2);
+}
+
+function canExposeStructuredContent(data) {
+  if (data === null || typeof data !== 'object' || Array.isArray(data)) {
     return false;
   }
 
-  getSubscribers(resourceUri) {
-    return Array.from(this.subscriptions.get(resourceUri) || []);
-  }
-
-  notifyChange(resourceUri, changeType = 'updated') {
-    const subscribers = this.getSubscribers(resourceUri);
-    if (subscribers.length > 0) {
-      this.emit('resource-changed', {
-        uri: resourceUri,
-        changeType,
-        subscribers
-      });
-    }
+  try {
+    return JSON.stringify(data).length <= Math.min(MAX_TOOL_RESPONSE_CHARS, 128 * 1024);
+  } catch (_error) {
+    return false;
   }
 }
 
-export const subscriptionManager = new ResourceSubscriptionManager();
-
-/**
- * Create MCP-compliant tool response
- */
-export function createToolResponse(data, contentType = ContentTypes.TEXT) {
-  if (data === null || data === undefined) {
-    return {
-      content: [{
-        type: contentType,
-        text: ''
-      }],
-      isError: false
-    };
-  }
-
-  // If already in MCP format, return as-is
-  if (data.content && Array.isArray(data.content)) {
-    return data;
-  }
-
-  // Convert to MCP format
-  let text;
-  if (typeof data === 'string') {
-    text = data;
-  } else {
-    text = JSON.stringify(data, null, 2);
-  }
-
-  return {
+export function createMcpToolResponse(data, contentType = ContentTypes.TEXT) {
+  const response = {
     content: [{
       type: contentType,
-      text
+      text: stringifyResponseData(data)
     }],
     isError: false
   };
+
+  if (canExposeStructuredContent(data)) {
+    response.structuredContent = data;
+  }
+
+  return response;
 }
 
-/**
- * Create MCP-compliant error response
- */
-export function createErrorResponse(error, code = ErrorCodes.INTERNAL_ERROR) {
+export function createMcpErrorContent(error, code = ErrorCodes.INTERNAL_ERROR) {
+  const errorMessage = error instanceof Error ? error.message : String(error || 'Unknown error');
   const errorData = {
-    details: error.details || {}
+    error: errorMessage,
+    code,
+    details: error?.details || {}
   };
 
-  // Only include stack trace in development environment
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === 'development' && error instanceof Error && error.stack) {
     errorData.stack = error.stack;
   }
 
   return {
-    error: {
-      code,
-      message: error.message || 'Unknown error',
-      data: errorData
-    },
+    content: [{
+      type: ContentTypes.TEXT,
+      text: stringifyResponseData(errorData)
+    }],
+    structuredContent: errorData,
     isError: true
   };
 }
 
-/**
- * Create paginated response with cursor support
- */
-export function createPaginatedResponse(items, cursor, limit, totalCount = null) {
+export function createMcpPaginatedResponse(items, cursor, limit, totalCount = null) {
   const hasMore = totalCount ? items.length + (cursor || 0) < totalCount : items.length === limit;
-  const nextCursor = hasMore ? (cursor || 0) + items.length : null;
+  const nextCursor = hasMore ? createSignedCursor((cursor || 0) + items.length) : null;
 
-  return {
-    content: [{
-      type: ContentTypes.TEXT,
-      text: JSON.stringify({
-        items,
-        pagination: {
-          cursor: cursor || 0,
-          nextCursor,
-          hasMore,
-          limit,
-          totalCount
-        }
-      }, null, 2)
-    }],
-    isError: false
-  };
-}
-
-/**
- * Parse cursor from string
- */
-export function parseCursor(cursorStr) {
-  if (!cursorStr) return { offset: 0 };
-
-  try {
-    // Verify HMAC signature and decode
-    const decoded = verifyAndDecodeCursor(cursorStr);
-    // If decoded is already an object, return it; otherwise parse it
-    if (typeof decoded === 'object') {
-      return decoded;
+  return createMcpToolResponse({
+    items,
+    pagination: {
+      cursor: cursor || 0,
+      nextCursor,
+      hasMore,
+      limit,
+      totalCount
     }
-    return JSON.parse(decoded);
-  } catch {
-    // Fallback to simple offset
-    const offset = parseInt(cursorStr, 10);
-    return { offset: isNaN(offset) ? 0 : offset };
-  }
-}
-
-/**
- * Create cursor string
- */
-export function createCursor(data) {
-  if (typeof data === 'number') {
-    data = { offset: data };
-  }
-  // Create HMAC-signed cursor
-  return createSignedCursor(data);
-}
-
-/**
- * Enhanced server capabilities declaration
- */
-export function getServerCapabilities() {
-  return {
-    // Resource capabilities
-    resources: {
-      list: true,
-      get: true,
-      subscribe: true,
-      templates: true
-    },
-    // Tool capabilities
-    tools: {
-      list: true,
-      execute: true
-    },
-    // Protocol features
-    features: {
-      pagination: true,
-      subscriptions: true,
-      contentTypes: ['text', 'image', 'resource'],
-      errorHandling: true,
-      rateLimit: {
-        enabled: true,
-        defaultLimit: 100,
-        window: 60000
-      }
-    },
-    // Server info
-    info: {
-      name: 'lerian-mcp-server',
-      version: '0.1.0',
-      description: 'MCP server for Midaz financial ledger system'
-    }
-  };
-}
-
-/**
- * Register MCP protocol handlers
- */
-export function registerProtocolHandlers(server) {
-  // Capabilities endpoint
-  server.setRequestHandler('capabilities', async () => {
-    return createToolResponse(getServerCapabilities());
   });
-
-  // Resource subscription handlers
-  server.setRequestHandler('resources/subscribe', async (params) => {
-    const { uri, subscriberId } = params;
-    const success = subscriptionManager.subscribe(uri, subscriberId);
-    return createToolResponse({ success, uri });
-  });
-
-  server.setRequestHandler('resources/unsubscribe', async (params) => {
-    const { uri, subscriberId } = params;
-    const success = subscriptionManager.unsubscribe(uri, subscriberId);
-    return createToolResponse({ success, uri });
-  });
-
-  server.setRequestHandler('resources/list-subscriptions', async (params) => {
-    const { subscriberId } = params;
-    const subscriptions = [];
-    
-    subscriptionManager.subscriptions.forEach((subscribers, uri) => {
-      if (subscribers.has(subscriberId)) {
-        subscriptions.push(uri);
-      }
-    });
-    
-    return createToolResponse({ subscriptions });
-  });
-
-  // Listen for resource changes
-  subscriptionManager.on('resource-changed', (event) => {
-    // Notify subscribers through server
-    server.notification('resources/changed', {
-      uri: event.uri,
-      changeType: event.changeType,
-      timestamp: new Date().toISOString()
-    });
-  });
-}
-
-/**
- * Template parameter support for resources
- */
-export function parseResourceTemplate(template, params) {
-  let result = template;
-  
-  // Replace {param} with actual values
-  Object.entries(params).forEach(([key, value]) => {
-    result = result.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
-  });
-  
-  return result;
-}
-
-/**
- * Validate resource URI with template support
- */
-export function validateResourceUri(uri, template) {
-  // Extract template parameters
-  const templateParams = template.match(/\{(\w+)\}/g)?.map(p => p.slice(1, -1)) || [];
-  
-  // Create regex from template with input validation
-  // Escape special characters first to prevent ReDoS
-  const escapedTemplate = template.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  // Then restore our parameter placeholders
-  let regexStr = escapedTemplate.replace(/\\\{(\w+)\\\}/g, '([^/]+)');
-  regexStr = `^${regexStr}$`;
-  
-  const regex = new RegExp(regexStr);
-  const match = uri.match(regex);
-  
-  if (!match) {
-    return { valid: false, params: {} };
-  }
-  
-  // Extract parameter values
-  const params = {};
-  templateParams.forEach((param, index) => {
-    params[param] = match[index + 1];
-  });
-  
-  return { valid: true, params };
 }

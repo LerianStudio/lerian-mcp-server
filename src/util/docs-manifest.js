@@ -60,7 +60,23 @@ const staticMappings = {
   'docs/security': '/docs/security.md',
   'docs/troubleshooting': '/docs/troubleshooting.md',
   'docs/domain-driven-design': '/concepts/domain-driven-design.md',
-  'docs/cqrs': '/concepts/cqrs.md'
+  'docs/cqrs': '/concepts/cqrs.md',
+
+  // Portfolio product fallbacks
+  'products/midaz': '/midaz/overview.md',
+  'products/fetcher': '/fetcher/overview.md',
+  'products/reporter': '/reporter/overview.md',
+  'products/matcher': '/matcher/overview.md',
+  'products/tracer': '/tracer/overview.md',
+  'products/flowker': '/flowker/overview.md',
+  'products/underwriter': '/underwriter/overview.md',
+  'fetcher/connections': '/fetcher/connections.md',
+  'reporter/templates': '/reporter/templates.md',
+  'reporter/reports': '/reporter/reports.md',
+  'matcher/reconciliation': '/matcher/reconciliation.md',
+  'tracer/rules': '/tracer/rules.md',
+  'flowker/workflows': '/flowker/workflows.md',
+  'underwriter/loan-products': '/underwriter/loan-products.md'
 };
 
 /**
@@ -152,7 +168,7 @@ function parseLLMSContent(content) {
         logger.warn('Failed to parse URL from llms.txt', { line: trimmed, error: error.message });
       }
     } else if (trimmed.startsWith('http')) {
-      // Handle plain URLs (backward compatibility)
+      // Handle plain URLs in llms.txt manifests
       try {
         const url = new URL(trimmed);
         const pathname = url.pathname;

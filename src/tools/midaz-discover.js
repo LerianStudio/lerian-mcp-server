@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { getSchema, findSchemas, listResources, getSchemasByComponent } from '../api/schemas/index.js';
 import { resolveAction, getEndpointCount } from '../api/router.js';
 import { createToolResponse, createErrorResponse, wrapToolHandler, ErrorCodes } from '../util/mcp-helpers.js';
+import { registerMcpTool, TOOL_ANNOTATIONS } from '../util/mcp-registration.js';
 
 const discoverInputSchema = {
   intent: z.enum(['list-resources', 'describe-resource', 'describe-action', 'search', 'list-by-component']).describe(
@@ -13,7 +14,8 @@ const discoverInputSchema = {
   component: z.enum(['onboarding', 'transaction', 'crm', 'ledger']).optional().describe('Component filter for intent="list-by-component"'),
 };
 
-async function handleDiscover(args) {
+async function handleDiscover(args = {}) {
+  args = args || {};
   const { intent, resource, action, query, component } = args;
 
   switch (intent) {
@@ -125,10 +127,12 @@ async function handleDiscover(args) {
 }
 
 export function registerDiscoverTool(server) {
-  server.tool(
+  registerMcpTool(
+    server,
     'midaz-discover',
     'Discover Midaz API resources, actions, and schemas. Use this BEFORE calling midaz-execute to find the right resource+action and understand required parameters. Supports listing all resources, describing specific resources/actions, searching, and filtering by component.',
     discoverInputSchema,
-    wrapToolHandler(handleDiscover)
+    wrapToolHandler(handleDiscover),
+    { annotations: TOOL_ANNOTATIONS.READ_ONLY }
   );
 }

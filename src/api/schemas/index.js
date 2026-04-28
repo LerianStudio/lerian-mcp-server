@@ -52,7 +52,10 @@ export function getSchemasByComponent(component) {
 }
 
 export function findSchemas(query) {
-  const q = query.toLowerCase();
+  const q = String(query ?? '').trim().toLowerCase();
+  if (!q) {
+    return [];
+  }
   return allSchemas.filter(s =>
     s.resource.toLowerCase().includes(q) ||
     s.description.toLowerCase().includes(q) ||

@@ -19,10 +19,9 @@ const __dirname = dirname(__filename);
 const isNpx = process.env.npm_config_user_agent?.includes('npx');
 
 // Print startup message
-console.error('🚀 Starting Lerian MCP Server (Documentation Mode)...');
-console.error('📚 Providing documentation, tutorials, and SDK code generation');
-console.error('💡 This server does NOT connect to Lerian backend APIs');
-console.error('   For live API access, use Lerian SDKs in your application');
+console.error('🚀 Starting Lerian MCP Server...');
+console.error('📚 Providing portfolio docs, tutorials, SDK examples, live API tools, and workflows');
+console.error('💡 Configure product API URLs/tokens in lerian-mcp-config.json or environment variables');
 console.error('');
 if (isNpx) {
   console.error('📦 Running via npx');
@@ -32,9 +31,9 @@ if (isNpx) {
 function checkConfiguration() {
   const configPaths = [
     join(process.cwd(), 'lerian-mcp-config.json'),
-    join(process.cwd(), 'midaz-mcp-config.json'), // backward compatibility
+    join(process.cwd(), 'midaz-mcp-config.json'),
     join(process.env.HOME || '', '.lerian', 'mcp-config.json'),
-    join(process.env.HOME || '', '.midaz', 'mcp-config.json') // backward compatibility
+    join(process.env.HOME || '', '.midaz', 'mcp-config.json')
   ];
 
   for (const path of configPaths) {
@@ -62,7 +61,7 @@ async function main() {
 
   // If config file exists, pass it as an argument
   const args = process.argv.slice(2);
-  if (configPath && !args.includes('--config')) {
+  if (configPath && !args.includes('--config') && !args.includes('--config-file')) {
     args.push('--config', configPath);
   }
 

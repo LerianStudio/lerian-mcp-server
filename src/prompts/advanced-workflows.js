@@ -5,6 +5,8 @@
 
 import { createLogger } from "../util/mcp-logging.js";
 import { z } from 'zod';
+import { getRuntimeSurface } from '../runtime/surface-registry.js';
+import { registerMcpPrompt } from '../util/mcp-registration.js';
 
 const logger = createLogger('advanced-prompts');
 
@@ -14,7 +16,8 @@ const logger = createLogger('advanced-prompts');
 export const registerAdvancedPrompts = (server) => {
 
   // Multi-Format File Balance Checker - Intelligent account balance analysis from CSV/TXT/JSON
-  server.prompt(
+  registerMcpPrompt(
+    server,
     "check-file-balances",
     "Analyze CSV, TXT, or JSON files to find account UUIDs and check their balances in Midaz",
     {
@@ -98,9 +101,9 @@ ${confirm_uuids ? `
 ${organization_hint ? 
   `**Using Organization Hint:** ${organization_hint}
    - First, I'll verify this organization exists
-   - Use: \`list-organizations\` to confirm` :
+   - Use: \`midaz-discover\` to inspect organizations, then \`midaz-execute\` with resource="organizations", action="list" to confirm` :
   `**Auto-Discovery Mode:**
-   - Use: \`list-organizations\` to see all available organizations
+   - Use: \`midaz-discover\` to inspect organizations, then \`midaz-execute\` with resource="organizations", action="list" to see all available organizations
    - If multiple organizations found, I'll ask you to choose
    - If only one organization, I'll proceed automatically`}
 
@@ -108,9 +111,9 @@ ${organization_hint ?
 ${ledger_hint ?
   `**Using Ledger Hint:** ${ledger_hint}
    - Verify ledger exists in chosen organization
-   - Use: \`list-ledgers\` with organization_id` :
+   - Use: \`midaz-execute\` with resource="ledgers", action="list", and organization path context` :
   `**Auto-Discovery Mode:**
-   - Use: \`list-ledgers\` for the chosen organization
+   - Use: \`midaz-execute\` with resource="ledgers" and action="list" for the chosen organization
    - If multiple ledgers found, I'll ask you to choose
    - If only one ledger, I'll proceed automatically`}
 
@@ -118,12 +121,12 @@ ${ledger_hint ?
 **For each account UUID from your CSV:**
 
 1. **Account Verification**
-   - Use: \`list-accounts\` to verify account exists
+   - Use: \`midaz-execute\` with resource="accounts" and action="list" to verify account exists
    - Match CSV UUIDs against actual account IDs
    - Report missing/invalid accounts
 
 2. **Balance Retrieval**
-   - Use: \`get-balance\` for each valid account
+   - Use: \`midaz-execute\` with the balance action contract for each valid account
    - Collect balance data with asset information
    - Handle any errors gracefully
 
@@ -169,7 +172,7 @@ Issues Found:
 4. **Get comprehensive balance report**
 
 **Commands I'll Use:**
-- \`list-organizations\` → \`list-ledgers\` → \`list-accounts\` → \`get-balance\`
+- \`midaz-discover\` → \`midaz-execute\` organizations.list → ledgers.list → accounts.list → balance lookup
 
 This creates a complete audit trail from your CSV to live Midaz balances! 🎯`;
 
@@ -187,7 +190,8 @@ This creates a complete audit trail from your CSV to live Midaz balances! 🎯`;
   );
 
   // External Balance Checker - Check external account balances by asset
-  server.prompt(
+  registerMcpPrompt(
+    server,
     "check-external-balance",
     "Check the balance of external accounts for specific assets in Midaz ledgers",
     {
@@ -231,7 +235,7 @@ External accounts in Midaz represent **system-level accounts** for each asset ty
 ### Step 1: Asset Discovery ${list_all_assets ? '(Requested)' : '(Optional)'}
 ${list_all_assets || !asset_code ? `
 **List Available Assets:**
-Use: \`list-assets\` with:
+Use \`midaz-execute\` with resource="assets" and action="list" using:
 - organization_id: "${organization_id}"
 - ledger_id: "${ledger_id}"
 
@@ -344,14 +348,14 @@ Total External Liquidity:
 ## 🎯 Next Steps
 
 After checking external balances:
-1. **Compare with Internal Balances:** Use \`list-accounts\` + \`get-balance\` for internal accounts
+1. **Compare with Internal Balances:** Use \`midaz-execute\` account listing plus balance lookup for internal accounts
 2. **Analyze Asset Distribution:** Understand internal vs external allocation
 3. **Plan Transactions:** Use balance info for transaction planning
 4. **Monitor Changes:** Set up regular external balance monitoring
 
 **Commands I'll Execute:**
 \`\`\`
-${list_all_assets ? 'list-assets →' : ''} 
+${list_all_assets ? 'midaz-execute assets.list →' : ''} 
 external-account-retrieval → external-balance-check
 \`\`\`
 
@@ -371,7 +375,8 @@ Ready to check your external balances! 🚀`;
   );
 
   // Chained Discovery - Intelligent hierarchy exploration
-  server.prompt(
+  registerMcpPrompt(
+    server,
     "discover-midaz-hierarchy",
     "Explore the complete Midaz hierarchy: organizations → ledgers → assets → accounts → portfolios",
     {
@@ -401,7 +406,7 @@ ${ledger_id ? `**Ledger Focus:** ${ledger_id}` : ''}
       if (discovery_level === "organizations" || discovery_level === "full") {
         content += `### 🏢 Phase 1: Organizations Discovery
 
-**Command:** \`list-organizations\`${show_counts ? ' (with statistics)' : ''}
+**Command:** \`midaz-execute\` with resource="organizations" and action="list"${show_counts ? ' (with statistics if supported by the contract)' : ''}
 
 **Expected Information:**
 - Organization IDs and names
@@ -422,8 +427,8 @@ ${show_counts ? '- Count of ledgers per organization' : ''}
         content += `### 📚 Phase 2: Ledgers Discovery
 
 ${organization_id ? 
-  `**Command:** \`list-ledgers\` with organization_id="${organization_id}"` :
-  `**Command:** \`list-ledgers\` for each organization found`}
+  `**Command:** \`midaz-execute\` with resource="ledgers", action="list", pathParams={"organizationId":"${organization_id}"}` :
+  `**Command:** \`midaz-execute\` with resource="ledgers" and action="list" for each organization found`}
 
 **Expected Information:**
 - Ledger IDs, names, and descriptions
@@ -444,10 +449,10 @@ ${include_metadata ? '- Full ledger metadata and configuration' : ''}
         content += `### 💎 Phase 3: Assets Discovery
 
 ${ledger_id ?
-  `**Command:** \`list-assets\` with ledger_id="${ledger_id}"` :
+  `**Command:** \`midaz-execute\` with resource="assets" and pathParams={"ledgerId":"${ledger_id}"}` :
   organization_id ?
-    `**Command:** \`list-assets\` for all ledgers in organization` :
-    `**Command:** \`list-assets\` for each ledger found`}
+    `**Command:** \`midaz-execute\` with resource="assets" for all ledgers in organization` :
+    `**Command:** \`midaz-execute\` with resource="assets" for each ledger found`}
 
 **Expected Information:**
 - Asset codes and names (USD, EUR, BTC, etc.)
@@ -467,7 +472,7 @@ ${show_counts ? '- Usage statistics per asset' : ''}
       if ((discovery_level === "accounts" || discovery_level === "full") && !["organizations", "ledgers", "assets"].includes(discovery_level)) {
         content += `### 💳 Phase 4: Accounts Discovery
 
-**Command Pattern:** \`list-accounts\` with organization + ledger context
+**Command Pattern:** \`midaz-execute\` with resource="accounts" and organization + ledger context
 
 **Expected Information:**
 - Account IDs, names, and types
@@ -489,7 +494,7 @@ ${include_metadata ? '- Full account metadata and settings' : ''}
       if ((discovery_level === "portfolios" || discovery_level === "full") && discovery_level !== "organizations") {
         content += `### 📁 Phase 5: Portfolios Discovery
 
-**Command Pattern:** \`list-portfolios\` for organizational groupings
+**Command Pattern:** \`midaz-execute\` with resource="portfolios" for organizational groupings
 
 **Expected Information:**
 - Portfolio IDs, names, and descriptions
@@ -542,10 +547,10 @@ ${show_counts ? `
 
 **Commands Chain:**
 \`\`\`
-list-organizations → 
-  for each org: list-ledgers → 
-    for each ledger: list-assets + list-accounts + list-portfolios →
-      for each account: get-balance
+midaz-discover → organizations.list → 
+  for each org: ledgers.list → 
+    for each ledger: assets.list + accounts.list + portfolios.list →
+      for each account: balance lookup
 \`\`\`
 
 This gives you a **complete picture** of your Midaz ecosystem! 🚀`;
@@ -564,279 +569,65 @@ This gives you a **complete picture** of your Midaz ecosystem! 🚀`;
   );
 
   // Comprehensive Tools Catalog
-  server.prompt(
+  registerMcpPrompt(
+    server,
     "show-all-tools",
-    "Display complete catalog of all Midaz MCP tools, operations, and parameters with descriptions",
+    "Display the current Lerian MCP tool catalog, prompt surface, and recommended entry points",
     {
       category_filter: z.enum(["all", "financial", "documentation", "learning", "workflow", "discovery"]).optional().describe("Filter tools by category"),
       detail_level: z.enum(["summary", "detailed", "examples"]).optional().describe("Level of detail to show"),
-      show_parameters: z.boolean().optional().describe("Include parameter details"),
-      show_examples: z.boolean().optional().describe("Include usage examples")
+      
     },
     async (args) => {
-      const { category_filter = "all", detail_level = "detailed", show_parameters = true, show_examples = false } = args;
-      
-      const content = `# 🛠️ Complete Midaz MCP Tools Catalog
+      const { category_filter = "all", detail_level = "detailed" } = args;
+      const surface = getRuntimeSurface();
 
-**Filter:** ${category_filter.toUpperCase()} | **Detail:** ${detail_level} | **Parameters:** ${show_parameters ? 'Yes' : 'No'} | **Examples:** ${show_examples ? 'Yes' : 'No'}
+      const coreTools = surface.tools.filter((tool) => tool.category === 'portfolio' || tool.category === 'workflow');
+      const apiTools = surface.tools.filter((tool) => tool.category === 'live-api');
+      const prompts = surface.prompts;
 
----
+      const toolLines = (category_filter === 'workflow'
+        ? coreTools
+        : category_filter === 'financial'
+          ? apiTools
+          : surface.tools
+      ).map((tool) => `- \`${tool.name}\` (${tool.product}) - ${tool.description}`);
 
-## 📋 Tool Categories Overview
+      const promptLines = prompts.map((prompt) => `- \`${prompt.name}\` - ${prompt.description}`);
+      const workflowLines = surface.workflows.map((workflow) => `- \`${workflow.id}\` - ${workflow.description}`);
+      const productLines = surface.liveProducts.map((product) => `- ${product.name}: ${product.liveToolNames.join(', ')}`);
 
-${category_filter === "all" || category_filter === "financial" ? `
-### 🏦 Financial API Tools (18 tools)
-*Direct access to Midaz financial operations*
+      const content = `# Lerian MCP Surface Catalog
 
-#### Organization Management
-- **\`list-organizations\`** - List all organizations with pagination
-  ${show_parameters ? `
-  **Parameters:**
-  - \`cursor\` (optional): Pagination cursor
-  - \`limit\` (optional): Results per page (1-100, default: 10)` : ''}
-  ${show_examples ? `
-  **Example:** \`list-organizations\` with \`limit: 20\`` : ''}
+**Filter:** ${category_filter.toUpperCase()} | **Detail:** ${detail_level.toUpperCase()}
 
-- **\`get-organization\`** - Get specific organization details
-  ${show_parameters ? `
-  **Parameters:**
-  - \`id\` (required): Organization UUID` : ''}
+This runtime currently exposes **${surface.toolCount} live tools**, **${surface.promptCount} prompts**, and **${surface.workflowCount} workflows**.
 
-#### Ledger Management  
-- **\`list-ledgers\`** - List ledgers for an organization
-  ${show_parameters ? `
-  **Parameters:**
-  - \`organization_id\` (required): Organization UUID
-  - \`cursor\`, \`limit\` (optional): Pagination
-  - \`start_date\`, \`end_date\` (optional): Date filters
-  - \`metadata\` (optional): JSON metadata filter` : ''}
+## Runtime Tools
 
-- **\`get-ledger\`** - Get specific ledger details
-  ${show_parameters ? `
-  **Parameters:**
-  - \`organization_id\` (required): Organization UUID
-  - \`id\` (required): Ledger UUID` : ''}
+${toolLines.join('\n')}
 
-#### Account Management
-- **\`list-accounts\`** - List accounts in a ledger
-  ${show_parameters ? `
-  **Parameters:**
-  - \`organization_id\` (required): Organization UUID
-  - \`ledger_id\` (required): Ledger UUID
-  - \`cursor\`, \`limit\` (optional): Pagination
-  - \`asset_code\` (optional): Filter by asset (USD, EUR, etc.)
-  - \`type\` (optional): Account type filter
-  - \`metadata\` (optional): JSON metadata filter` : ''}
+## Live Product Coverage
 
-- **\`get-account\`** - Get specific account details
-- **\`get-balance\`** - Get account balance information
+${productLines.join('\n')}
 
-#### Transaction Management
-- **\`list-transactions\`** - List transactions in a ledger
-  ${show_parameters ? `
-  **Parameters:**
-  - \`organization_id\` (required): Organization UUID
-  - \`ledger_id\` (required): Ledger UUID
-  - \`account_id\` (optional): Filter by account
-  - \`cursor\`, \`limit\` (optional): Pagination
-  - \`start_date\`, \`end_date\` (optional): Date filters` : ''}
+## Cross-Product Workflows
 
-- **\`get-transaction\`** - Get specific transaction details
-- **\`list-operations\`** - List operations for an account
-- **\`get-operation\`** - Get specific operation details
+${workflowLines.join('\n')}
 
-#### Asset Management
-- **\`list-assets\`** - List assets in a ledger
-- **\`get-asset\`** - Get specific asset details
+## Prompt Surface
 
-#### Portfolio Management
-- **\`list-portfolios\`** - List portfolios in a ledger
-- **\`get-portfolio\`** - Get specific portfolio details
+${promptLines.join('\n')}
 
-#### Segment Management
-- **\`list-segments\`** - List segments in a ledger
-- **\`get-segment\`** - Get specific segment details
+## Recommended Entry Points
 
-#### SDK Tools
-- **\`generate-sdk-code\`** - Generate production-ready SDK code
-- **\`compare-sdk-features\`** - Compare Golang vs TypeScript SDKs
-- **\`find-sdk-examples\`** - Find specific SDK code examples
-` : ''}
-
-${category_filter === "all" || category_filter === "documentation" ? `
-### 📚 Documentation Tools (1 unified tool)
-*Comprehensive documentation access*
-
-- **\`midaz-docs\`** - Unified documentation access (13 operations)
-  ${show_parameters ? `
-  **Parameters:**
-  - \`operation\` (required): Type of documentation
-    - \`getting-started\` - New user setup
-    - \`api-reference\` - API endpoint details
-    - \`code-examples\` - Implementation examples
-    - \`best-practices\` - Recommended patterns
-    - \`architecture\` - System design docs
-    - \`troubleshooting\` - Problem solving
-    - \`search\` - Documentation search
-    - And 6 more operations...
-  - \`query\` (for search): Search terms
-  - \`useCase\` (for examples): Specific scenario
-  - \`language\` (for examples): Programming language` : ''}
-` : ''}
-
-${category_filter === "all" || category_filter === "learning" ? `
-### 🎓 Learning Tools (1 unified tool)
-*Interactive learning and tutorials*
-
-- **\`midaz-learn\`** - Unified learning system (4 types)
-  ${show_parameters ? `
-  **Parameters:**
-  - \`type\` (required): Learning interaction type
-    - \`path\` - Personalized learning roadmap
-    - \`tutorial\` - Hands-on practice sessions
-    - \`concept\` - Deep concept explanations  
-    - \`search\` - Learning-focused search
-  - \`userRole\` (for path): developer, admin, business, explorer
-  - \`experienceLevel\` (for path): beginner, intermediate, advanced
-  - \`tutorialId\` (for tutorial): Specific tutorial name
-  - \`concept\` (for concept): Concept to explain
-  - \`query\` (for search): Learning question` : ''}
-` : ''}
-
-${category_filter === "all" || category_filter === "workflow" ? `
-### 🧙‍♂️ Workflow Prompts (4 prompts)
-*Interactive wizards and assistants*
-
-- **\`create-transaction-wizard\`** - Step-by-step transaction creation
-  ${show_parameters ? `
-  **Parameters:**
-  - \`organization_id\` (optional): Organization context
-  - \`ledger_id\` (optional): Ledger context
-  - \`transaction_type\` (optional): transfer, payment, deposit, withdrawal
-  - \`step\` (optional): Current wizard step (1-5)` : ''}
-
-- **\`debug-my-balance\`** - Balance troubleshooting assistant
-  ${show_parameters ? `
-  **Parameters:**
-  - \`organization_id\` (required): Organization to check
-  - \`ledger_id\` (required): Ledger to check
-  - \`account_id\` (optional): Specific account
-  - \`issue_type\` (optional): wrong_balance, missing_transactions, etc.` : ''}
-
-- **\`setup-my-org\`** - Organization setup wizard
-  ${show_parameters ? `
-  **Parameters:**
-  - \`org_name\` (optional): Organization name
-  - \`business_type\` (optional): fintech, gaming, ecommerce, etc.
-  - \`setup_stage\` (optional): planning, organization, ledger, accounts, etc.` : ''}
-
-- **\`explain-my-data\`** - Data analysis assistant
-  ${show_parameters ? `
-  **Parameters:**
-  - \`organization_id\` (required): Organization to analyze
-  - \`ledger_id\` (optional): Specific ledger focus
-  - \`analysis_type\` (optional): overview, balances, transactions, patterns
-  - \`time_period\` (optional): today, week, month, quarter, all` : ''}
-` : ''}
-
-${category_filter === "all" || category_filter === "discovery" ? `
-### 🔍 Discovery Prompts (3 prompts)
-*Help and exploration tools*
-
-- **\`help-me-start\`** - Quick start guide
-  ${show_parameters ? '**Parameters:** None' : ''}
-
-- **\`help-with-api\`** - API-specific guidance  
-  ${show_parameters ? '**Parameters:** None' : ''}
-
-- **\`help-me-learn\`** - Personalized learning paths
-  ${show_parameters ? `
-  **Parameters:**
-  - \`role\` (optional): Your primary role
-  - \`experience\` (optional): Your experience level` : ''}
-` : ''}
-
-${category_filter === "all" ? `
-### 🚀 Advanced Workflow Prompts (NEW!)
-*Intelligent data processing and discovery*
-
-- **\`check-file-balances\`** - Multi-format file balance analysis (CSV/TXT/JSON)
-  ${show_parameters ? `
-  **Parameters:**
-  - \`file_content\` (required): File content (CSV, TXT, or JSON)
-  - \`file_type\` (optional): csv, txt, json, auto (default: auto-detect)
-  - \`organization_hint\` (optional): Organization preference
-  - \`ledger_hint\` (optional): Ledger preference
-  - \`account_column\` (optional): CSV column with account IDs
-  - \`json_path\` (optional): JSON path to account IDs
-  - \`confirm_uuids\` (optional): For TXT files, confirm found UUIDs` : ''}
-
-- **\`check-external-balance\`** - External account balance checker
-  ${show_parameters ? `
-  **Parameters:**
-  - \`organization_id\` (required): Organization ID
-  - \`ledger_id\` (required): Ledger ID  
-  - \`asset_code\` (optional): Specific asset (USD, EUR, BTC, etc.)
-  - \`list_all_assets\` (optional): List available assets first` : ''}
-
-- **\`discover-midaz-hierarchy\`** - Complete hierarchy exploration
-  ${show_parameters ? `
-  **Parameters:**
-  - \`discovery_level\` (optional): organizations, ledgers, assets, accounts, portfolios, full
-  - \`organization_id\` (optional): Focus on specific organization
-  - \`ledger_id\` (optional): Focus on specific ledger
-  - \`show_counts\` (optional): Include statistics
-  - \`include_metadata\` (optional): Include metadata` : ''}
-
-- **\`show-all-tools\`** - This tools catalog prompt
-  ${show_parameters ? `
-  **Parameters:**
-  - \`category_filter\` (optional): Filter by tool category
-  - \`detail_level\` (optional): summary, detailed, examples
-  - \`show_parameters\` (optional): Include parameter details
-  - \`show_examples\` (optional): Include usage examples` : ''}
-` : ''}
-
-## 📊 Tool Statistics
-
-**Total Tools Available:** ${category_filter === "financial" ? '18' : category_filter === "documentation" ? '1' : category_filter === "learning" ? '1' : category_filter === "workflow" ? '4' : category_filter === "discovery" ? '3' : '30+'} tools
-**Total Operations:** ${category_filter === "all" ? '50+' : 'Varies by category'} operations
-**Prompt Primitives:** ${category_filter === "all" ? '10' : category_filter === "workflow" || category_filter === "discovery" ? '7' : '0'} prompts
-
-## 🎯 Common Usage Patterns
-
-**Data Exploration Flow:**
-\`\`\`
-list-organizations → list-ledgers → list-accounts → get-balance
-\`\`\`
-
-**Transaction Creation Flow:**
-\`\`\`
-create-transaction-wizard (guides through entire process)
-\`\`\`
-
-**Learning Flow:**
-\`\`\`
-help-me-start → midaz-learn → midaz-docs → hands-on practice
-\`\`\`
-
-**Troubleshooting Flow:**
-\`\`\`
-debug-my-balance → explain-my-data → specific API tools
-\`\`\`
-
-## 💡 Pro Tips
-
-- **Chain Operations:** Use discovery prompts to find IDs for specific API calls
-- **Use Wizards:** Workflow prompts guide you through complex operations
-- **Start Simple:** Begin with \`help-me-start\` if you're new
-- **Explore Hierarchy:** Use \`discover-midaz-hierarchy\` to understand your setup
-- **Batch Analysis:** Use \`check-csv-balances\` for bulk operations
-
-**Need specific help with any tool?** Ask me to demonstrate any of these tools in action! 🚀`;
+1. Start with \`lerian\` + \`product="all"\` + \`operation="discover"\`.
+2. Use \`portfolio-workflow\` when the task crosses product boundaries.
+3. Use the matching \`*-discover\` tool before any \`*-execute\` call.
+4. Use the prompts when you want guided Midaz learning and workflow assistance.`;
 
       return {
-        description: `Complete tools catalog - ${category_filter} category`,
+        description: `Current Lerian MCP catalog filtered by ${category_filter}`,
         messages: [{
           role: "user",
           content: {

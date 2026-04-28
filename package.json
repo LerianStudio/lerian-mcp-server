@@ -1,7 +1,7 @@
 {
   "name": "@lerianstudio/lerian-mcp-server",
   "version": "3.4.0",
-  "description": "A Model Context Protocol (MCP) server providing comprehensive Lerian documentation, interactive tutorials, SDK code generation, and best practices for AI assistants. Documentation-only mode - use Lerian SDKs for live API access.",
+  "description": "A Model Context Protocol (MCP) server for Lerian portfolio discovery, documentation, learning, SDK examples, live product API discovery/execution, and cross-product workflows.",
   "main": "dist/index.js",
   "exports": {
     ".": "./dist/index.js",
@@ -23,8 +23,8 @@
     "build:release": "npm run version:update && npm run build",
     "clean": "rm -rf dist",
     "rebuild": "npm run clean && npm run build",
-    "lint": "eslint . --ext .ts",
-    "lint:fix": "eslint . --ext .ts --fix",
+    "lint": "eslint . --ext .js,.ts",
+    "lint:fix": "eslint . --ext .js,.ts --fix",
     "typecheck": "tsc --noEmit",
     "audit": "npm audit",
     "audit:fix": "npm audit fix",
@@ -32,11 +32,12 @@
     "security:audit:comprehensive": "SECURITY_AUDIT_LEVEL=comprehensive node scripts/security-audit.js",
     "security:update": "node scripts/dependency-updater.js",
     "security:check": "npm run security:audit && npm run audit",
-    "test": "npm run build && node test/basic-server-test.js",
+    "test": "npm run test:node && node test/basic-server-test.js",
+    "test:node": "node --test test/runtime-surface-registry.test.js test/workflow-session-layer.test.js test/product-safety.test.js test/product-routing-config.test.js test/portfolio-workflow-tool.test.js test/security-fixes.test.js",
     "test:server": "node test/basic-server-test.js",
-    "test:inspector": "node test/mcp-inspector-esm.js",
-    "test:requests": "node test/run-test-requests.js",
-    "test:mcp": "node test/mcp-inspector-tests.js",
+    "test:inspector": "npm run test:node",
+    "test:requests": "npm run test:node",
+    "test:mcp": "npm run test:node",
     "ci:install": "npm ci",
     "ci:lint": "npm run lint && npm run typecheck",
     "ci:test": "npm run build && npm test",
@@ -74,7 +75,7 @@
   },
   "homepage": "https://github.com/lerianstudio/lerian-mcp-server#readme",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.19.0"
   },
   "files": [
     "dist/**/*",
@@ -86,14 +87,14 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@types/node": "^22.19.17",
-    "@typescript-eslint/eslint-plugin": "^8.58.0",
-    "@typescript-eslint/parser": "^8.58.0",
-    "eslint": "^9.39.4",
+    "@types/node": "^25.6.0",
+    "@typescript-eslint/eslint-plugin": "^8.59.1",
+    "@typescript-eslint/parser": "^8.59.1",
+    "eslint": "^10.2.1",
     "node-fetch": "^3.3.2",
     "ts-node": "^10.9.2",
-    "typedoc": "^0.28.18",
-    "typescript": "^5.9.3",
-    "zod": "^3.25.76"
+    "typedoc": "^0.28.19",
+    "typescript": "^6.0.3",
+    "zod": "^4.3.6"
   }
 }

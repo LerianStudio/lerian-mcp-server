@@ -1,12 +1,15 @@
 /**
  * Unified Lerian Tool - Single tool for all Lerian products
  * Consolidates documentation, learning, and SDK generation across all products
- * Products: midaz, tracer, flowker, reporter, (+ more to be added)
+ * Products: midaz, fetcher, reporter, matcher, tracer, underwriter, flowker
  */
 
 import { z } from "zod";
 import { wrapToolHandler, validateArgs } from "../util/mcp-helpers.js";
+import { registerMcpTool, TOOL_ANNOTATIONS } from "../util/mcp-registration.js";
 import { createLogger } from "../util/mcp-logging.js";
+import { PRODUCT_IDS, getProductConfig, listProducts, isResourceForProduct } from "../catalog/product-registry.js";
+import { getRuntimeSurface } from '../runtime/surface-registry.js';
 
 // Import all existing utilities
 import {
@@ -28,55 +31,26 @@ import {
 
 const logger = createLogger('lerian');
 
-// Product configurations
-const PRODUCTS = {
-  midaz: {
-    name: 'Midaz',
-    description: 'Financial ledger system with double-entry accounting',
-    docsPath: '/midaz',
-    categories: ['transactions', 'ledgers', 'accounts', 'portfolios', 'organizations'],
-    sdkLanguages: ['go', 'typescript', 'javascript']
-  },
-  tracer: {
-    name: 'Tracer',
-    description: 'Observability and tracing platform',
-    docsPath: '/tracer',
-    categories: ['tracing', 'monitoring', 'spans', 'logs'],
-    sdkLanguages: ['go', 'typescript', 'javascript']
-  },
-  flowker: {
-    name: 'Flowker',
-    description: 'Workflow orchestration engine',
-    docsPath: '/flowker',
-    categories: ['workflows', 'tasks', 'scheduling', 'automation'],
-    sdkLanguages: ['go', 'typescript', 'javascript']
-  },
-  reporter: {
-    name: 'Reporter',
-    description: 'Reporting and analytics platform',
-    docsPath: '/reporter',
-    categories: ['reports', 'analytics', 'dashboards', 'metrics'],
-    sdkLanguages: ['go', 'typescript', 'javascript']
-  }
-};
+const OPERATIONS = ['discover', 'docs', 'learn', 'sdk', 'search'];
 
 /**
  * Register unified Lerian tool
  */
 export const registerLerianTool = (server) => {
-  server.tool(
+  registerMcpTool(
+    server,
     "lerian",
-    "Unified tool for ALL Lerian products (midaz, tracer, flowker, reporter). Access documentation, learning resources, and SDK code generation for any product. Use product='all' to search across all products. Operations: 'docs' (documentation), 'learn' (tutorials), 'sdk' (code generation), 'search' (cross-product search).",
+    "Unified portfolio tool for Lerian products. Discover supported products and current MCP coverage, access documentation and learning resources, generate SDK examples, and search across the portfolio. Live API execution is available through product-specific tools for Midaz, Fetcher, Reporter, Matcher, Tracer, Flowker, and Underwriter, with cross-product workflow support available via portfolio-workflow.",
     {
-      product: z.enum(['midaz', 'tracer', 'flowker', 'reporter', 'all'])
-        .describe("Target Lerian product (REQUIRED). 'midaz': financial ledger, 'tracer': observability, 'flowker': workflows, 'reporter': analytics, 'all': search across all products."),
+      product: z.enum(PRODUCT_IDS)
+        .describe("Target Lerian product (REQUIRED). Use 'all' for portfolio-wide discovery and search. Supported products: midaz, reporter, fetcher, matcher, tracer, underwriter, flowker, all."),
 
-      operation: z.enum(['docs', 'learn', 'sdk', 'search'])
-        .describe("Operation type (REQUIRED). 'docs': get documentation, 'learn': interactive tutorials and learning paths, 'sdk': generate SDK code, 'search': search documentation and examples."),
+      operation: z.enum(OPERATIONS)
+        .describe("Operation type (REQUIRED). 'discover': inspect portfolio products and current MCP coverage, 'docs': get documentation, 'learn': interactive tutorials and learning paths, 'sdk': generate SDK code, 'search': search documentation and examples."),
 
       // Common parameters
       topic: z.string().optional()
-        .describe("Topic or subject matter, 5-200 characters (REQUIRED for: docs, learn, search). Examples: 'getting-started', 'authentication', 'transactions', 'error-handling', 'workflows'. Be specific about what you want to learn or find."),
+        .describe("Topic or subject matter, 5-200 characters (REQUIRED for: docs, learn, search). Examples: 'getting-started', 'authentication', 'transactions', 'templates', 'rules', 'workflows'. Be specific about what you want to learn or find."),
 
       // SDK-specific parameters
       language: z.enum(['go', 'typescript', 'javascript']).optional()
@@ -113,8 +87,8 @@ export const registerLerianTool = (server) => {
         includeExamples = true,
         maxResults = 10
       } = validateArgs(args, z.object({
-        product: z.enum(['midaz', 'tracer', 'flowker', 'reporter', 'all']),
-        operation: z.enum(['docs', 'learn', 'sdk', 'search']),
+        product: z.enum(PRODUCT_IDS),
+        operation: z.enum(OPERATIONS),
         topic: z.string().optional(),
         language: z.enum(['go', 'typescript', 'javascript']).optional(),
         useCase: z.string().optional(),
@@ -134,12 +108,15 @@ export const registerLerianTool = (server) => {
 
       try {
         // Validate product-specific requirements
-        if (product !== 'all' && !PRODUCTS[product]) {
-          throw new Error(`Unknown product: ${product}. Available: ${Object.keys(PRODUCTS).join(', ')}`);
+        if (product !== 'all' && !getProductConfig(product)) {
+          throw new Error(`Unknown product: ${product}. Available: ${PRODUCT_IDS.join(', ')}`);
         }
 
         // Route by operation
         switch (operation) {
+          case 'discover':
+            return await handleDiscover(product);
+
           case 'docs':
             if (!topic) throw new Error("topic parameter required for docs operation");
             return await handleDocs(product, topic, format, includeExamples);
@@ -168,15 +145,118 @@ export const registerLerianTool = (server) => {
         });
         throw error;
       }
-    })
+    }),
+    { annotations: TOOL_ANNOTATIONS.READ_ONLY }
   );
 
-  logger.info('✅ Unified Lerian tool registered (docs + learn + sdk for all products)');
+  logger.info('✅ Unified Lerian tool registered (discover + docs + learn + sdk + search for the Lerian portfolio)');
 };
 
 // ======================
 // Operation Handlers
 // ======================
+
+/**
+ * Handle portfolio discovery requests
+ */
+async function handleDiscover(product) {
+  const allProducts = listProducts();
+
+  if (product === 'all') {
+    const surface = getRuntimeSurface();
+    const liveProductNames = surface.liveProducts.map((item) => item.name).join(', ');
+
+    return {
+      portfolio: 'Lerian',
+      currentRuntimeTools: surface.tools.map((tool) => tool.name),
+      lerianOperations: OPERATIONS,
+      workflows: surface.workflows,
+      products: allProducts.map((item) => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        repoPath: item.repoPath,
+        sdkLanguages: item.sdkLanguages,
+        primaryWorkflows: item.primaryWorkflows,
+        currentMcpSupport: item.currentMcpSupport,
+        targetMcpSupport: item.targetMcpSupport
+      })),
+      notes: [
+        'The current runtime is portfolio-aware and documentation-rich across the full Lerian surface.',
+        `Live API access is currently available for ${liveProductNames} via product-specific tools.`,
+        'Cross-product workflow support includes fetcher-to-reporter and matcher-to-fetcher-to-midaz in portfolio-workflow, with stateful workflow sessions now available.',
+        'The revamp direction now shifts from first adapters to deeper typed control-plane operations and richer cross-product workflows.'
+      ],
+      recommendedNextSteps: [
+        'Use lerian with operation="docs" or "search" for product-level knowledge lookup.',
+        'Use lerian with a specific product and operation="discover" for a deeper per-product summary.',
+        'Use portfolio-workflow to inspect or execute the fetcher-to-reporter and matcher-to-fetcher-to-midaz cross-product workflows.',
+        'Use the matching `*-discover` tool before the matching `*-execute` tool when you need live API access.'
+      ]
+    };
+  }
+
+  const productConfig = getProductConfig(product);
+
+  return {
+    id: productConfig.id,
+    product: productConfig.name,
+    description: productConfig.description,
+    repoPath: productConfig.repoPath,
+    sdkLanguages: productConfig.sdkLanguages,
+    primaryWorkflows: productConfig.primaryWorkflows,
+    currentMcpSupport: productConfig.currentMcpSupport,
+    targetMcpSupport: productConfig.targetMcpSupport,
+    recommendedNextSteps: product === 'midaz'
+      ? [
+          'Use lerian operation="docs" or "search" for conceptual guidance.',
+          'Use midaz-discover to inspect resources, actions, and schemas.',
+          'Use midaz-execute only after confirming the resource/action contract via midaz-discover.'
+        ]
+      : product === 'fetcher'
+        ? [
+            'Use lerian operation="docs" or "search" for conceptual guidance.',
+            'Use fetcher-discover to inspect connections, migration actions, and fetcher job contracts.',
+            'Use fetcher-execute only after confirming the required organizationId/productName context via fetcher-discover.'
+          ]
+      : product === 'reporter'
+        ? [
+            'Use lerian operation="docs" or "search" for conceptual guidance.',
+            'Use reporter-discover to inspect templates, reports, deadlines, data sources, metrics, and operational endpoints.',
+            'Use reporter-execute after checking multipart requirements for template upload/update and binary download behavior for reports.'
+          ]
+      : product === 'tracer'
+        ? [
+            'Use lerian operation="docs" or "search" for conceptual guidance.',
+            'Use tracer-discover to inspect rules, limits, validations, audit-events, and operational endpoints.',
+            'Use tracer-execute after checking the validation payload or rule/limit transition contract and ensuring TRACER_API_KEY is configured.'
+          ]
+      : product === 'matcher'
+        ? [
+            'Use lerian operation="docs" or "search" for conceptual guidance.',
+            'Use matcher-discover to inspect contexts, sources, field maps, discovery-over-Fetcher endpoints, matching, governance, reporting, and system operations.',
+            'Use matcher-execute after checking the request contract and ensuring MATCHER_AUTH_TOKEN is configured.',
+            'Use portfolio-workflow for the matcher-to-fetcher-to-midaz guided path.'
+          ]
+      : product === 'flowker'
+        ? [
+            'Use lerian operation="docs" or "search" for conceptual guidance.',
+            'Use flowker-discover to inspect catalog resources, workflow definitions, execution start requirements, provider and executor configuration payloads, observability endpoints, and webhook behavior.',
+            'Use flowker-execute after checking auth expectations and providing Idempotency-Key for workflow execution start when required.'
+          ]
+      : product === 'underwriter'
+        ? [
+            'Use lerian operation="docs" or "search" for conceptual guidance.',
+            'Use underwriter-discover to inspect public jurisdictions, protected loan-product lifecycle actions, schedule preview payloads, and the mounted example endpoints.',
+            'Use underwriter-execute after checking bearer-auth requirements for protected routes and the decimal-string contract for schedule preview.'
+          ]
+      : [
+          'Use lerian operation="docs" or "search" to inspect available portfolio knowledge for this product.',
+          'Use lerian operation="learn" for guided learning paths and examples.',
+          'Use help-me-start or help-with-api to inspect the current runtime tool surface.'
+        ]
+  };
+}
 
 /**
  * Handle documentation requests
@@ -188,14 +268,9 @@ async function handleDocs(product, topic, format, includeExamples) {
     if (product === 'all') {
       resources = await getAvailableResources();
     } else {
-      const productConfig = PRODUCTS[product];
+      const productConfig = getProductConfig(product);
       resources = await getAvailableResources();
-      // Filter by product path
-      resources = resources.filter(r =>
-        r.path?.includes(productConfig.docsPath) ||
-        r.url?.includes(productConfig.docsPath) ||
-        r.category === product
-      );
+      resources = resources.filter((resource) => isResourceForProduct(resource, productConfig));
     }
 
     // Search within product resources
@@ -206,12 +281,12 @@ async function handleDocs(product, topic, format, includeExamples) {
 
     if (searchResults.length === 0) {
       return {
-        product: product === 'all' ? 'all products' : PRODUCTS[product].name,
+        product: product === 'all' ? 'all products' : getProductConfig(product).name,
         topic,
         found: false,
         message: `No documentation found for topic: ${topic}`,
         suggestions: product !== 'all'
-          ? [`Try searching in product categories: ${PRODUCTS[product].categories.join(', ')}`]
+          ? [`Try searching in product categories: ${getProductConfig(product).categories.join(', ')}`]
           : ['Try specifying a specific product instead of "all"']
       };
     }
@@ -240,7 +315,7 @@ async function handleDocs(product, topic, format, includeExamples) {
     );
 
     return {
-      product: product === 'all' ? 'all products' : PRODUCTS[product].name,
+      product: product === 'all' ? 'all products' : getProductConfig(product).name,
       topic,
       found: true,
       totalResults: searchResults.length,
@@ -258,8 +333,8 @@ async function handleDocs(product, topic, format, includeExamples) {
 async function handleLearn(product, topic, experienceLevel, format) {
   try {
     const productInfo = product === 'all'
-      ? { name: 'All Lerian Products', categories: Object.values(PRODUCTS).flatMap(p => p.categories) }
-      : PRODUCTS[product];
+      ? { name: 'All Lerian Products', categories: listProducts().flatMap((item) => item.categories) }
+      : getProductConfig(product);
 
     // Generate learning path based on topic and experience
     const learningContent = generateLearningContent(product, topic, experienceLevel);
@@ -299,9 +374,16 @@ async function handleSDK(product, language, useCase, includeComments) {
       throw new Error("Cannot generate SDK code for 'all' products. Please specify a specific product.");
     }
 
-    const productConfig = PRODUCTS[product];
+    const productConfig = getProductConfig(product);
 
     // Verify SDK language is supported for this product
+    if (productConfig.sdkLanguages.length === 0) {
+      throw new Error(
+        `${productConfig.name} SDK generation is not available in this MCP surface yet. ` +
+        `Use ${product}-discover and ${product}-execute for live API operations.`
+      );
+    }
+
     if (!productConfig.sdkLanguages.includes(language)) {
       throw new Error(
         `${language} SDK not available for ${productConfig.name}. ` +
@@ -335,6 +417,7 @@ async function handleSDK(product, language, useCase, includeComments) {
  */
 async function handleSearch(product, query, maxResults, format) {
   try {
+    const normalizedQuery = String(query ?? '').toLowerCase();
     // Search across all resources or product-specific
     let searchResults;
 
@@ -342,19 +425,15 @@ async function handleSearch(product, query, maxResults, format) {
       searchResults = await searchResources(query);
     } else {
       const allResources = await getAvailableResources();
-      const productConfig = PRODUCTS[product];
+      const productConfig = getProductConfig(product);
 
       // Filter by product first, then search
-      const productResources = allResources.filter(r =>
-        r.path?.includes(productConfig.docsPath) ||
-        r.url?.includes(productConfig.docsPath) ||
-        r.category === product
-      );
+      const productResources = allResources.filter((resource) => isResourceForProduct(resource, productConfig));
 
       // Simple keyword search within product resources
       searchResults = productResources.filter(r => {
         const searchText = `${r.title} ${r.description} ${r.name} ${r.path}`.toLowerCase();
-        return searchText.includes(query.toLowerCase());
+        return searchText.includes(normalizedQuery);
       });
     }
 
@@ -382,7 +461,7 @@ async function handleSearch(product, query, maxResults, format) {
     });
 
     return {
-      product: product === 'all' ? 'all products' : PRODUCTS[product].name,
+      product: product === 'all' ? 'all products' : getProductConfig(product).name,
       query,
       totalResults: searchResults.length,
       returnedResults: limitedResults.length,
@@ -426,7 +505,7 @@ function formatContent(content, format, includeExamples) {
  * Generate learning content for a topic
  */
 function generateLearningContent(product, topic, experienceLevel) {
-  const productName = product === 'all' ? 'Lerian Products' : PRODUCTS[product].name;
+  const productName = product === 'all' ? 'Lerian Products' : getProductConfig(product).name;
 
   // Base content structure
   const baseContent = {
@@ -455,7 +534,7 @@ function generatePrerequisites(product, topic, experienceLevel) {
   if (experienceLevel === 'beginner') {
     return [
       ...common,
-      `Introduction to ${product === 'all' ? 'Lerian ecosystem' : PRODUCTS[product].name}`,
+      `Introduction to ${product === 'all' ? 'Lerian ecosystem' : getProductConfig(product).name}`,
       'Basic API concepts'
     ];
   }
@@ -463,14 +542,14 @@ function generatePrerequisites(product, topic, experienceLevel) {
   if (experienceLevel === 'intermediate') {
     return [
       ...common,
-      `Working knowledge of ${product === 'all' ? 'Lerian products' : PRODUCTS[product].name}`,
+      `Working knowledge of ${product === 'all' ? 'Lerian products' : getProductConfig(product).name}`,
       'Experience with REST APIs'
     ];
   }
 
   return [
     ...common,
-    `Advanced understanding of ${product === 'all' ? 'Lerian architecture' : PRODUCTS[product].name}`,
+    `Advanced understanding of ${product === 'all' ? 'Lerian architecture' : getProductConfig(product).name}`,
     'Production deployment experience'
   ];
 }
@@ -486,7 +565,7 @@ function generateLearningSteps(product, topic, experienceLevel) {
     steps.push({
       step: i,
       title: `Step ${i}: ${getStepTitle(product, topic, experienceLevel, i)}`,
-      content: `Detailed content for step ${i} of ${topic}`,
+      content: `Study the ${topic} contract, identify required inputs, then verify behavior with the relevant discover tool before executing live operations.`,
       duration: `${5 * i} minutes`,
       checkpoint: `You should be able to ${getCheckpoint(product, topic, i)}`
     });
@@ -531,12 +610,12 @@ function generateLearningExamples(product, topic, experienceLevel) {
     {
       title: `Basic ${topic} example`,
       description: `Simple introduction to ${topic}`,
-      code: `// Example code for ${topic}\n// This would contain actual implementation`
+      code: `// Inspect the action contract before executing live operations.\n// Example: call <product>-discover with intent="describe-action" for ${topic}.`
     },
     {
       title: `Practical ${topic} use case`,
       description: `Real-world application of ${topic}`,
-      code: `// Production-ready example\n// This would contain actual implementation`
+      code: `// Production flow: discover contract -> validate inputs -> execute with explicit mutation confirmation when required.`
     }
   ];
 }
@@ -584,7 +663,7 @@ function calculateEstimatedTime(experienceLevel) {
  * Generate product-specific SDK code
  */
 function generateProductSDKCode(product, language, useCase, includeComments) {
-  const productConfig = PRODUCTS[product];
+  const productConfig = getProductConfig(product);
 
   // Generate based on product and language
   if (language === 'go') {
@@ -609,7 +688,7 @@ function generateGoSDK(product, productConfig, useCase, includeComments) {
 
 import (
 \t"context"
-\t"log"
+\t"fmt"
 \t"os"
 
 \t${comment}Import ${productConfig.name} SDK
@@ -618,27 +697,33 @@ import (
 )
 
 func main() {
+\tif err := run(context.Background()); err != nil {
+\t\tfmt.Fprintln(os.Stderr, err)
+\t\tos.Exit(1)
+\t}
+}
+
+func run(ctx context.Context) error {
 \t${includeComments ? `// Initialize ${productConfig.name} client` : ''}
 \tcfg, err := config.NewConfig(
 \t\tconfig.WithAPIKey(os.Getenv("${product.toUpperCase()}_API_KEY")),
 \t)
 \tif err != nil {
-\t\tlog.Fatalf("Failed to create config: %v", err)
+\t\treturn err
 \t}
 
 \tc, err := client.New(
 \t\tclient.WithConfig(cfg),
 \t)
 \tif err != nil {
-\t\tlog.Fatalf("Failed to create client: %v", err)
+\t\treturn err
 \t}
-\tdefer c.Shutdown(context.Background())
+\tdefer c.Shutdown(ctx)
 
 \t${includeComments ? `// Implement ${useCase}` : ''}
-\tctx := context.Background()
-\t${comment}Your implementation here
+\t${comment}Call the SDK method that matches the discovered ${productConfig.name} API contract.
 
-\tlog.Println("${productConfig.name} client initialized successfully")
+\treturn nil
 }`,
     dependencies: [
       `github.com/LerianStudio/${product}-sdk-golang`
@@ -684,7 +769,7 @@ async function main()${isTypeScript ? ': Promise<void>' : ''} {
 
 \ttry {
 \t\t${includeComments ? `// Implement ${useCase}` : ''}
-\t\t${comment}Your implementation here
+\t\t${comment}Call the SDK method that matches the discovered ${productConfig.name} API contract.
 
 \t\tconsole.log('${productConfig.name} client initialized successfully');
 \t} catch (error) {

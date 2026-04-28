@@ -4,7 +4,7 @@
  */
 
 import { createLogger } from './mcp-logging.js';
-import { createToolResponse, createErrorResponse, createPaginatedResponse } from './mcp-protocol.js';
+import { createMcpToolResponse, createMcpErrorContent } from './mcp-protocol.js';
 
 const logger = createLogger('client-adaptation');
 
@@ -154,7 +154,7 @@ export class ClientAdaptationManager {
    */
   formatResponse(data, toolName = null, isError = false) {
     if (!this.clientContext) {
-      return createToolResponse(data);
+      return createMcpToolResponse(data);
     }
 
     const format = this.clientContext.getCapability('outputFormat', ResponseFormats.STRUCTURED);
@@ -167,17 +167,17 @@ export class ClientAdaptationManager {
       formattedData = this.limitResponseSize(formattedData, maxSize);
 
       if (isError) {
-        return createErrorResponse(formattedData);
+        return createMcpErrorContent(formattedData);
       }
 
-      return createToolResponse(formattedData);
+      return createMcpToolResponse(formattedData);
     } catch (error) {
       logger.error('Response formatting failed', { 
         error: error.message,
         toolName,
         format 
       });
-      return createToolResponse(data); // Fallback to original
+      return createMcpToolResponse(data); // Fallback to original
     }
   }
 

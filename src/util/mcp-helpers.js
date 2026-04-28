@@ -7,6 +7,136 @@
 
 import { createSignedCursor, verifyAndDecodeCursor } from './cursor-security.js';
 
+const MAX_TOOL_RESPONSE_CHARS = 1024 * 1024;
+const SECRET_KEY_PATTERN = /(authorization|token|password|secret|api[-_]?key|credential|cookie)/i;
+const SECRET_VALUE_PATTERN = /(bearer\s+[a-z0-9._~+/-]+=*|api[-_]?key\s*[:=]\s*[^\s,;]+|eyJ[a-z0-9_-]+\.[a-z0-9_-]+\.[a-z0-9_-]+)/i;
+
+export function normalizeCaughtError(error) {
+  const objectLike = error !== null && typeof error === 'object';
+  return {
+    raw: error,
+    code: objectLike ? error.code : undefined,
+    status: objectLike ? error.status : undefined,
+    statusText: objectLike ? error.statusText : undefined,
+    name: objectLike ? error.name : undefined,
+    message: error instanceof Error ? error.message : String(error ?? 'Unknown error'),
+    service: objectLike ? error.service : undefined
+  };
+}
+
+function redactString(value) {
+  return SECRET_VALUE_PATTERN.test(value) ? '[redacted]' : value;
+}
+
+function sanitizeToolData(data, depth = 0, seen = new WeakSet(), allowSecretKeys = new Set()) {
+  if (depth > 8) {
+    return '[truncated]';
+  }
+
+  if (typeof data === 'string') {
+    return redactString(data);
+  }
+
+  if (typeof data === 'bigint') {
+    return data.toString();
+  }
+
+  if (data instanceof Error) {
+    return {
+      name: data.name,
+      message: data.message
+    };
+  }
+
+  if (Array.isArray(data)) {
+    if (seen.has(data)) {
+      return '[circular]';
+    }
+    seen.add(data);
+    return data.map((item) => sanitizeToolData(item, depth + 1, seen, allowSecretKeys));
+  }
+
+  if (data && typeof data === 'object') {
+    if (seen.has(data)) {
+      return '[circular]';
+    }
+    seen.add(data);
+    const sanitized = {};
+    for (const [key, value] of Object.entries(data)) {
+      sanitized[key] = SECRET_KEY_PATTERN.test(key) && !allowSecretKeys.has(key)
+        ? '[redacted]'
+        : sanitizeToolData(value, depth + 1, seen, allowSecretKeys);
+    }
+    return sanitized;
+  }
+
+  return data;
+}
+
+function safeJsonStringify(data, spacing = 2) {
+  try {
+    return JSON.stringify(data, null, spacing);
+  } catch (_error) {
+    return JSON.stringify({
+      serializationError: true,
+      reason: 'Tool response could not be serialized safely'
+    }, null, spacing);
+  }
+}
+
+function stringifyToolData(data, allowSecretKeys = new Set()) {
+  if (data === undefined || data === null) {
+    return '';
+  }
+
+  if (typeof data === 'string') {
+    return redactString(data);
+  }
+
+  const sanitized = sanitizeToolData(data, 0, new WeakSet(), allowSecretKeys);
+  const serialized = safeJsonStringify(sanitized, 2);
+  if (serialized.length <= MAX_TOOL_RESPONSE_CHARS) {
+    return serialized;
+  }
+
+  return JSON.stringify({
+    truncated: true,
+    reason: `Tool response exceeded ${MAX_TOOL_RESPONSE_CHARS} characters`,
+    originalType: Array.isArray(data) ? 'array' : typeof data,
+    keys: data && typeof data === 'object' && !Array.isArray(data) ? Object.keys(data).slice(0, 50) : undefined,
+    preview: serialized.slice(0, MAX_TOOL_RESPONSE_CHARS)
+  }, null, 2);
+}
+
+function canExposeStructuredContent(data) {
+  if (data === null || data === undefined || typeof data !== 'object' || Array.isArray(data)) {
+    return false;
+  }
+
+  const serialized = safeJsonStringify(data, 0);
+  return serialized !== undefined &&
+    serialized.length <= Math.min(MAX_TOOL_RESPONSE_CHARS, 128 * 1024);
+}
+
+function sanitizeErrorData(data) {
+  return data === null ? null : sanitizeToolData(data);
+}
+
+function getPublicErrorData(data) {
+  if (!data || typeof data !== 'object') {
+    return data;
+  }
+
+  const { originalError: _originalError, stack: _stack, ...publicData } = data;
+  return publicData;
+}
+
+function isStructuredObject(data) {
+  return data !== null &&
+    typeof data === 'object' &&
+    !Array.isArray(data);
+}
+
 /**
  * Create a successful MCP tool response
  * @param {any} data - The data to return
@@ -14,14 +144,24 @@ import { createSignedCursor, verifyAndDecodeCursor } from './cursor-security.js'
  * @returns {Object} MCP-compliant response
  */
 export function createToolResponse(data, mimeType = 'application/json') {
-  return {
+  const options = typeof mimeType === 'object' && mimeType !== null ? mimeType : {};
+  const resolvedMimeType = typeof mimeType === 'string' ? mimeType : 'application/json';
+  const allowSecretKeys = new Set(options.allowSecretKeys || []);
+  const sanitizedData = sanitizeToolData(data, 0, new WeakSet(), allowSecretKeys);
+  const response = {
     content: [{
       type: "text",
-      text: typeof data === 'string' ? data : JSON.stringify(data, null, 2),
-      mimeType
+      text: stringifyToolData(sanitizedData, allowSecretKeys),
+      mimeType: resolvedMimeType
     }],
     isError: false
   };
+
+  if (isStructuredObject(sanitizedData) && canExposeStructuredContent(sanitizedData)) {
+    response.structuredContent = sanitizedData;
+  }
+
+  return response;
 }
 
 /**
@@ -38,7 +178,7 @@ export function createErrorResponse(code, message, data = null) {
   };
   
   if (data !== null) {
-    error.data = data;
+    error.data = sanitizeErrorData(getPublicErrorData(data));
   }
   
   throw error;
@@ -115,8 +255,9 @@ export function createPaginatedResponse(items, options = {}, metadata = {}) {
  */
 export function wrapToolHandler(handler) {
   return async (args, extra) => {
+    const safeArgs = args || {};
     try {
-      const result = await handler(args, extra);
+      const result = await handler(safeArgs, extra);
       
       // If handler returns an MCP response object, use it directly
       if (result && result.content && Array.isArray(result.content)) {
@@ -126,40 +267,40 @@ export function wrapToolHandler(handler) {
       // Otherwise, wrap in MCP response format
       return createToolResponse(result);
     } catch (error) {
+      const normalized = normalizeCaughtError(error);
       // If it's already a JSON-RPC error, re-throw it
-      if (error.code && typeof error.code === 'number') {
+      if (typeof normalized.code === 'number') {
         throw error;
       }
       
       // Handle specific error types
-      if (error.message?.includes('not found')) {
+      if (normalized.message.includes('not found')) {
         throw createErrorResponse(
           ErrorCodes.RESOURCE_NOT_FOUND,
-          error.message,
-          { resource: args.id || args.name }
+          normalized.message,
+          { resource: safeArgs.id || safeArgs.name }
         );
       }
       
-      if (error.message?.includes('unauthorized') || error.message?.includes('forbidden')) {
+      if (normalized.message.includes('unauthorized') || normalized.message.includes('forbidden')) {
         throw createErrorResponse(
           ErrorCodes.RESOURCE_ACCESS_DENIED,
           'Access denied to resource'
         );
       }
       
-      if (error.message?.includes('backend') || error.message?.includes('API')) {
+      if (normalized.message.includes('backend') || normalized.message.includes('API')) {
         throw createErrorResponse(
           ErrorCodes.BACKEND_ERROR,
           'Backend service unavailable',
-          { service: error.service || 'unknown', originalError: error.message }
+          { service: normalized.service || 'unknown', status: normalized.status }
         );
       }
       
       // Default to internal error
       throw createErrorResponse(
         ErrorCodes.INTERNAL_ERROR,
-        'An internal error occurred',
-        { originalError: error.message }
+        'An internal error occurred'
       );
     }
   };
@@ -187,10 +328,11 @@ export function validateArgs(args, schema) {
     }
     return args;
   } catch (error) {
+    const normalized = normalizeCaughtError(error);
     throw createErrorResponse(
       ErrorCodes.INVALID_PARAMS,
       'Invalid parameters',
-      { validation: error.errors || error.message }
+      { validation: (normalized.raw && typeof normalized.raw === 'object' && normalized.raw.errors) || normalized.message }
     );
   }
 }
@@ -204,10 +346,11 @@ export function validateArgs(args, schema) {
  */
 export function logToolInvocation(toolName, args, extra) {
   const timestamp = new Date().toISOString();
+  const safeArgs = args || {};
   const logEntry = {
     timestamp,
     tool: toolName,
-    args: Object.keys(args).length > 0 ? args : undefined,
+    args: Object.keys(safeArgs).length > 0 ? safeArgs : undefined,
     requestId: extra?.requestId
   };
   

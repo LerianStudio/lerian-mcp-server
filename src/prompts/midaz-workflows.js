@@ -5,6 +5,7 @@
 
 import { createLogger } from "../util/mcp-logging.js";
 import { z } from 'zod';
+import { registerMcpPrompt } from '../util/mcp-registration.js';
 
 const logger = createLogger('workflow-prompts');
 
@@ -14,7 +15,8 @@ const logger = createLogger('workflow-prompts');
 export const registerWorkflowPrompts = (server) => {
 
   // Transaction Creation Wizard - Step-by-step transaction builder
-  server.prompt(
+  registerMcpPrompt(
+    server,
     "create-transaction-wizard",
     "Guide me through creating a transaction step by step with my actual Midaz data",
     {
@@ -40,13 +42,13 @@ export const registerWorkflowPrompts = (server) => {
 
 ${organization_id ? 
   `✅ Using Organization: ${organization_id}\n\n**Next:** I'll help you find the right ledger and accounts.` :
-  `**First, let's find your organization:**\n\nUse: \`list-organizations\` to see available organizations\nThen re-run this wizard with organization_id parameter.`
+  `**First, let's find your organization:**\n\nUse \`midaz-discover\` to inspect organizations, then \`midaz-execute\` with resource="organizations" and action="list". Re-run this wizard with organization_id parameter.`
 }
 
 ${ledger_id && organization_id ?
   `✅ Using Ledger: ${ledger_id}\n\n**Ready for Step 2!** Re-run with step=2` :
   organization_id ? 
-    `**Next:** Use \`list-ledgers\` with organization_id="${organization_id}" to find your ledger\nThen re-run with both organization_id and ledger_id` :
+    `**Next:** Use \`midaz-execute\` with resource="ledgers", action="list", and pathParams={"organizationId":"${organization_id}"} to find your ledger\nThen re-run with both organization_id and ledger_id` :
     ""
 }`;
           break;
@@ -58,16 +60,16 @@ ${ledger_id && organization_id ?
 
 **Current Step: Find Source & Destination Accounts**
 
-Use: \`list-accounts\` with:
-- organization_id: "${organization_id}"
-- ledger_id: "${ledger_id}"
+Use \`midaz-execute\` with resource="accounts", action="list", and:
+- pathParams.organizationId: "${organization_id}"
+- pathParams.ledgerId: "${ledger_id}"
 
 **Look for:**
 - **Source Account**: Where money comes FROM
 - **Destination Account**: Where money goes TO
 
 **💡 Pro Tips:**
-- Check account balances first: \`get-balance\`
+- Check account balances first with \`midaz-execute\` using the balance action contract
 - Note the asset types (USD, EUR, etc.)
 - Verify account types match your transaction
 
@@ -142,9 +144,9 @@ Here's your transaction template:
 Use transaction creation tools with your prepared data structure.
 
 **Verification Steps:**
-1. **Check Transaction**: Use \`get-transaction\` with returned transaction ID
-2. **Verify Balances**: Use \`get-balance\` on both accounts
-3. **Review Operations**: Use \`list-operations\` to see transaction history
+1. **Check Transaction**: Use \`midaz-execute\` with resource="transactions", action="get", and the returned transaction ID
+2. **Verify Balances**: Use \`midaz-execute\` with the balance action contract on both accounts
+3. **Review Operations**: Use \`midaz-execute\` with resource="operations" and action="list" to see transaction history
 
 **🎉 Success Indicators:**
 - Transaction status: "completed"
@@ -170,7 +172,8 @@ Use transaction creation tools with your prepared data structure.
   );
 
   // Balance Debugging Assistant
-  server.prompt(
+  registerMcpPrompt(
+    server,
     "debug-my-balance",
     "Help me understand and troubleshoot balance issues with my accounts",
     {
@@ -195,18 +198,18 @@ ${account_id ? `- Account: ${account_id}` : '- Account: [Will analyze all accoun
 
 ### 1. Get Current Balance
 ${account_id ? 
-  `Use: \`get-balance\` with organization_id="${organization_id}", ledger_id="${ledger_id}", account_id="${account_id}"` :
-  `Use: \`list-accounts\` with organization_id="${organization_id}", ledger_id="${ledger_id}" to see all balances`
+  `Use \`midaz-execute\` with the balance action contract and pathParams={"organizationId":"${organization_id}","ledgerId":"${ledger_id}","accountId":"${account_id}"}` :
+  `Use \`midaz-execute\` with resource="accounts", action="list", and pathParams={"organizationId":"${organization_id}","ledgerId":"${ledger_id}"} to see all accounts`
 }
 
 ### 2. Review Transaction History
-Use: \`list-operations\` with:
-- organization_id: "${organization_id}"
-- ledger_id: "${ledger_id}"
-${account_id ? `- account_id: "${account_id}"` : ''}
+Use \`midaz-execute\` with resource="operations" and action="list" using:
+- pathParams.organizationId: "${organization_id}"
+- pathParams.ledgerId: "${ledger_id}"
+${account_id ? `- pathParams.accountId: "${account_id}"` : ''}
 
 ### 3. Check Recent Transactions
-Use: \`list-transactions\` with date filters to see recent activity
+Use \`midaz-execute\` with resource="transactions" and action="list" plus date filters to see recent activity
 
 ## 🎯 Common Issues & Solutions
 
@@ -253,7 +256,8 @@ After gathering data above, use:
   );
 
   // Organization Setup Wizard
-  server.prompt(
+  registerMcpPrompt(
+    server,
     "setup-my-org",
     "Guide me through setting up a new organization with ledgers, accounts, and initial configuration",
     {
@@ -409,11 +413,11 @@ business_type === "gaming" ? `
 ## ✅ Setup Verification Checklist
 
 **Verify your setup:**
-1. **Organization**: Use \`get-organization\` to confirm details
-2. **Ledger**: Use \`get-ledger\` to verify configuration  
-3. **Assets**: Use \`list-assets\` to see available currencies
-4. **Accounts**: Use \`list-accounts\` to review structure
-5. **Balances**: Use \`get-balance\` to check initial state
+1. **Organization**: Use \`midaz-execute\` with resource="organizations" and action="get" to confirm details
+2. **Ledger**: Use \`midaz-execute\` with resource="ledgers" and action="get" to verify configuration  
+3. **Assets**: Use \`midaz-execute\` with resource="assets" and action="list" to see available currencies
+4. **Accounts**: Use \`midaz-execute\` with resource="accounts" to review structure
+5. **Balances**: Use \`midaz-execute\` with the balance action contract to check initial state
 
 ## 🚀 Next Steps
 
@@ -445,7 +449,8 @@ business_type === "gaming" ? `
   );
 
   // Data Explanation Assistant
-  server.prompt(
+  registerMcpPrompt(
+    server,
     "explain-my-data",
     "Help me understand my current Midaz data, balances, and transaction patterns",
     {
@@ -470,26 +475,26 @@ ${ledger_id ? `- Ledger: ${ledger_id}` : '- All Ledgers'}
 ### 1. Gather Your Data
 ${analysis_type === "overview" ? `
 **Get Complete Picture:**
-- \`list-organizations\` - Verify org details
-- \`list-ledgers\` - See all ledgers  
-- \`list-accounts\` - Review account structure
-- \`list-assets\` - Check available currencies` :
+- \`midaz-execute\` organizations.list - Verify org details
+- \`midaz-execute\` ledgers.list - See all ledgers  
+- \`midaz-execute\` accounts.list - Review account structure
+- \`midaz-execute\` assets.list - Check available currencies` :
 
 analysis_type === "balances" ? `
 **Balance Analysis:**
-- \`list-accounts\` - See all account balances
-- \`get-balance\` - Check specific accounts
+- \`midaz-execute\` accounts.list - See all account balances
+- \`midaz-execute\` balance lookup - Check specific accounts
 - Compare current vs expected balances` :
 
 analysis_type === "transactions" ? `
 **Transaction Analysis:**
-- \`list-transactions\` with date filters for ${time_period}
-- \`list-operations\` to see detailed movements
-- \`get-transaction\` for specific transaction details` :
+- \`midaz-execute\` transactions.list with date filters for ${time_period}
+- \`midaz-execute\` operations.list to see detailed movements
+- \`midaz-execute\` transactions.get for specific transaction details` :
 
 analysis_type === "patterns" ? `
 **Pattern Analysis:**
-- \`list-transactions\` across ${time_period}
+- \`midaz-execute\` transactions.list across ${time_period}
 - Group by account types, amounts, frequencies
 - Look for unusual transaction patterns` : `
 **Health Check:**

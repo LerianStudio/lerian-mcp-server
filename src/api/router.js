@@ -1,5 +1,6 @@
 import { getSchema, getAllSchemas } from './schemas/index.js';
 import { executeRequest } from './client.js';
+import { validateActionRequest } from '../products/http-helpers.js';
 
 export function resolveAction(resource, action) {
   const schema = getSchema(resource);
@@ -27,23 +28,13 @@ export function resolveAction(resource, action) {
   };
 }
 
-export async function routeAndExecute({ resource, action, pathParams, queryParams, body }) {
+export async function routeAndExecute({ resource, action, pathParams, queryParams, body, confirmMutation, mutationReason }) {
   const resolved = resolveAction(resource, action);
   if (resolved.error) {
     throw new Error(resolved.error);
   }
 
-  if (resolved.pathParams) {
-    const missingParams = [];
-    for (const [paramName, paramDef] of Object.entries(resolved.pathParams)) {
-      if (paramDef.required && (!pathParams || !pathParams[paramName])) {
-        missingParams.push(paramName);
-      }
-    }
-    if (missingParams.length > 0) {
-      throw new Error(`Missing required path parameters: ${missingParams.join(', ')}`);
-    }
-  }
+  validateActionRequest(resolved, { pathParams, queryParams, body, confirmMutation, mutationReason });
 
   return executeRequest({
     component: resolved.component,
@@ -52,6 +43,7 @@ export async function routeAndExecute({ resource, action, pathParams, queryParam
     pathParams: pathParams || {},
     queryParams: queryParams || {},
     body: body || undefined,
+    mutationReason,
   });
 }
 

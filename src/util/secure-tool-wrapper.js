@@ -1,5 +1,9 @@
 import { z } from 'zod';
 import { validateInput, auditToolInvocation, checkRateLimit, auditResourceAccess } from './security.js';
+import { registerMcpTool, TOOL_ANNOTATIONS } from './mcp-registration.js';
+import { createLogger } from './mcp-logging.js';
+
+const logger = createLogger('secure-tool-wrapper');
 
 /**
  * Wrap a tool handler with security features
@@ -45,7 +49,7 @@ export function createSecureTool(server, toolName, description, schema, handler)
   ) : z.any();
 
   // Register the tool with security wrapper
-  server.tool(toolName, description, schema, async (args, extra) => {
+  registerMcpTool(server, toolName, description, zodSchema, async (args, extra) => {
     const startTime = Date.now();
     let result = null;
     let error = null;
@@ -94,17 +98,17 @@ export function createSecureTool(server, toolName, description, schema, handler)
       // Log performance metrics
       const duration = Date.now() - startTime;
       if (duration > 5000) {
-        console.warn(`Tool ${toolName} took ${duration}ms to execute`);
+        logger.warn(`Tool ${toolName} took ${duration}ms to execute`);
       }
     }
-  });
+  }, { annotations: TOOL_ANNOTATIONS.LIVE_API });
 }
 
 /**
  * Wrap resource handler with security features
  */
 export function createSecureResource(server, name, uri, handler) {
-  server.resource(name, uri, async (resourceUri, extra) => {
+  server.registerResource(name, uri, {}, async (resourceUri, extra) => {
     let error = null;
     
     try {

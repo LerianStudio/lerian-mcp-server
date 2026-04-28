@@ -29,10 +29,12 @@ const LogLevelPriority = {
   emergency: 7
 };
 
-// Current log level (from environment or default to info)
-const currentLogLevel = process.env.MIDAZ_LOG_LEVEL || 'info';
+// Optional server-side floor. When unset, defer filtering to the MCP SDK so
+// client logging/setLevel requests can fully control the active threshold.
+const configuredLogLevel = process.env.LERIAN_LOG_LEVEL || process.env.MIDAZ_LOG_LEVEL;
+const reportedLogLevel = configuredLogLevel || 'client-controlled';
 const enableConsoleLogging = false; // Disabled for MCP protocol compatibility
-const enableDetailedLogging = process.env.MIDAZ_DETAILED_LOGS === 'true';
+const enableDetailedLogging = process.env.LERIAN_DETAILED_LOGS === 'true' || process.env.MIDAZ_DETAILED_LOGS === 'true';
 
 // MCP server instance (will be set during initialization)
 let mcpServer = null;
@@ -53,7 +55,7 @@ export function initializeMcpLogger(server) {
  */
 export function sendLogMessage(level, message, data = {}) {
   // Check if we should log this level
-  if (LogLevelPriority[level] < LogLevelPriority[currentLogLevel]) {
+  if (configuredLogLevel && LogLevelPriority[level] < LogLevelPriority[configuredLogLevel]) {
     return; // Skip logging for levels below current threshold
   }
 
@@ -72,14 +74,24 @@ export function sendLogMessage(level, message, data = {}) {
     }
   }
   
-  // Fallback to console if MCP server not initialized
   if (!mcpServer) {
     return;
   }
 
-  // Note: MCP SDK doesn't have sendLoggingMessage method
-  // For now, we'll just use console logging
-  // TODO: Implement proper MCP logging when SDK supports it
+  if (!mcpServer.isConnected?.() || !mcpServer.server?.getClientVersion?.()) {
+    return;
+  }
+
+  mcpServer.sendLoggingMessage({
+    level,
+    logger: data.component || 'lerian-mcp-server',
+    data: {
+      message,
+      ...logData
+    }
+  }).catch(() => {
+    // Logging must never break MCP request handling or stdio framing.
+  });
 }
 
 /**
@@ -248,7 +260,7 @@ export function logLifecycleEvent(event, details = {}) {
  */
 export function logLoggingConfig() {
   const config = {
-    logLevel: currentLogLevel,
+    logLevel: reportedLogLevel,
     consoleLogging: enableConsoleLogging,
     detailedLogging: enableDetailedLogging,
     environment: process.env.NODE_ENV || 'development'
@@ -267,7 +279,7 @@ export function logLoggingConfig() {
  */
 export function getLoggingConfig() {
   return {
-    logLevel: currentLogLevel,
+    logLevel: reportedLogLevel,
     consoleLogging: enableConsoleLogging,
     detailedLogging: enableDetailedLogging,
     availableLevels: Object.values(LogLevel)
