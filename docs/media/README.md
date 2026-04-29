@@ -1,87 +1,82 @@
-# Lerian MCP Server - System Sequence Diagrams
+# Lerian MCP Server - Media And Diagram Index
 
-Visual documentation of system interactions, data flows, and business processes for the Lerian Model Context Protocol server that provides access to Midaz financial ledger services.
+This directory is reserved for visual documentation of the Lerian MCP Server. The current runtime is a portfolio-aware MCP server that combines documentation, product discovery, live API execution, and cross-product workflow orchestration.
 
-## 📋 Diagram Categories
+At the moment, this directory only contains this index. Add diagram files here when architecture or sequence diagrams are produced.
 
-### 🔌 MCP Protocol & API Interactions
-- [MCP Protocol Flows](mcp-protocol-flows.md) - MCP client-server communication patterns
-- [API Flows](api-flows.md) - Midaz backend API request/response patterns
-- [Tool Execution Flows](tool-flows.md) - Tool registration and execution sequences
+## Current Runtime Surface
 
-### 🔐 Authentication & Security
-- [Authentication Flows](auth-flows.md) - Client authentication and token validation
-- [Security Flows](security-flows.md) - Input validation, audit logging, and security checks
+- **Transport:** MCP JSON-RPC over stdio.
+- **Server entrypoint:** `src/index.ts`.
+- **Package binary:** `lerian-mcp-server` from `src/bin/lerian-mcp-server.js`.
+- **Core tools:** `lerian` and `portfolio-workflow`.
+- **Live API pairs:** discover/execute tools for Midaz, Fetcher, Reporter, Matcher, Tracer, Flowker, and Underwriter.
+- **Prompt families:** tool discovery, Midaz workflow guidance, and advanced workflow guidance.
+- **Workflow layer:** stateful cross-product sessions for guided multi-step execution.
 
-### 💾 Data Processing & Backend Integration
-- [Data Flows](data-flows.md) - Backend service integration and data processing
-- [Configuration Flows](config-flows.md) - Configuration loading and service discovery
+## Recommended Diagram Set
 
-### 🏢 Business Process Flows  
-- [Financial Workflows](financial-flows.md) - Ledger operations and financial data flows
-- [Client Adaptation](client-adaptation-flows.md) - Dynamic client detection and adaptation
+When adding diagrams, keep them aligned with the implementation and use these names:
 
-### 🔄 System Architecture & Error Handling
-- [System Interactions](system-interactions.md) - Component communication patterns
-- [Error Handling](error-flows.md) - Error detection, recovery, and reporting sequences
+- `mcp-startup-flow.md`: process startup, configuration loading, security initialization, docs manifest loading, tool registration, and stdio connection.
+- `tool-discovery-flow.md`: `lerian`, `*-discover`, runtime surface registry, product registry, and schema registry interactions.
+- `live-api-execution-flow.md`: `*-execute`, action validation, mutation confirmation, URL construction, auth headers, HTTP execution, response parsing, and error classification.
+- `portfolio-workflow-flow.md`: workflow listing, planning, session creation, step execution, artifact capture, and session token handling.
+- `documentation-flow.md`: `llms.txt` manifest loading, static fallback, docs fetching, search, learning, SDK example generation, and formatting.
+- `configuration-flow.md`: command-line config, environment variables, local/user config files, legacy Midaz config paths, and default values.
+- `security-flow.md`: secret initialization, input validation, URL safety, mutation audit headers, output sanitization, and protected header handling.
+- `client-adaptation-flow.md`: MCP client detection and response adaptation.
+- `error-handling-flow.md`: startup errors, tool errors, product execution errors, and graceful shutdown.
+- `product-adapter-map.md`: relationship between product adapters, discover tools, execute tools, routers, schemas, and clients.
 
-## 🎯 Key Architecture Patterns
+## Architecture Snapshot
 
-**MCP Protocol Compliance**: JSON-RPC 2.0 over stdio with tool and resource capabilities
-**Unified Tool Pattern**: Consolidated tools with operation parameters for client compatibility  
-**Backend Integration**: Dual-service architecture (Onboarding + Transaction services)
-**Client Adaptation**: Dynamic response formatting based on client capabilities
-**Security-First**: Comprehensive input validation, audit logging, and secure configuration
-**Fallback Strategy**: Stub data when backend services unavailable
-
-## 🔍 System Overview
-
-The Lerian MCP Server acts as an intelligent proxy between MCP clients (like Claude Desktop) and the Midaz financial ledger backend services. It provides:
-
-- **21 Financial Tools**: Complete coverage of organizations, ledgers, accounts, transactions, balances
-- **2 Unified Tools**: Documentation and learning tools with multiple operations  
-- **Client Adaptation**: Automatic detection and optimization for different MCP clients
-- **Security Layer**: Input validation, rate limiting, and comprehensive audit logging
-- **Configuration Management**: Multi-source configuration with auto-detection capabilities
-
-## 🛠️ Component Architecture
-
-```
-MCP Client (Claude Desktop, VSCode, etc.)
-    ↓ stdio (JSON-RPC 2.0)
-McpServer (SDK)
-    ↓
-ClientIntegrationManager (adaptation layer)
-    ↓
-Tool Handlers (21 tools)
-    ↓
-ApiClient (HTTP with retry logic)
-    ↓
-Backend Services (Onboarding + Transaction)
+```text
+MCP Client
+  -> stdio JSON-RPC
+  -> McpServer
+  -> server bootstrap
+       -> config
+       -> secrets
+       -> security
+       -> docs manifest
+       -> logging
+       -> client detection
+  -> tool registry
+       -> lerian
+       -> portfolio-workflow
+       -> product discover/execute tools
+  -> product adapters
+       -> routers
+       -> schema registries
+       -> HTTP clients
+  -> configured Lerian product APIs
 ```
 
-## 🔧 How to Read These Diagrams
+## Product Adapter Coverage
 
-- **Participants**: System components, services, clients
-- **Messages**: API calls, tool invocations, data transfers
-- **Activations**: Processing time and resource usage
-- **Notes**: Business logic, security checks, error conditions
-- **Alt/Opt blocks**: Conditional flows and error handling
+- **Midaz:** organizations, ledgers, assets, accounts, transactions, balances, holders, aliases, account types, operation routes, transaction routes, metadata indexes, and related ledger/CRM surfaces.
+- **Fetcher:** connections, connection migrations, fetcher jobs, schema validation, and extraction control.
+- **Reporter:** data sources, templates, reports, deadlines, metrics, multipart template upload/update, and binary report download.
+- **Matcher:** contexts, sources, field maps, discovery-over-Fetcher, matching, exceptions, disputes, governance, reporting, and system operations.
+- **Tracer:** rules, limits, validations, audit events, and system operations.
+- **Flowker:** catalog, workflow definitions, executions, configurations, observability, webhooks, and system operations.
+- **Underwriter:** jurisdictions, loan products, loan applications, schedule preview, example endpoints, and system operations.
 
-## 📊 Diagram Statistics
+## Cross-Product Workflows
 
-- **Total Diagrams**: 10 comprehensive flow categories
-- **Coverage**: Complete system lifecycle from client connection to backend integration
-- **Focus Areas**: MCP protocol compliance, security, performance, error handling
-- **Update Frequency**: Synchronized with architecture changes and new tool additions
+- **Fetcher -> Reporter:** validate extraction mappings with Fetcher, then create, inspect, or download Reporter reports.
+- **Matcher -> Fetcher -> Midaz:** configure Matcher reconciliation, use Matcher discovery over Fetcher, inspect Fetcher jobs, and inspect Midaz ledger-side data.
 
-## 🛠️ Updating Diagrams
+## Diagram Maintenance Rules
 
-When system architecture changes:
-1. Update relevant sequence diagrams in each category
-2. Verify participant names match current component structure  
-3. Add new interaction patterns for new tools or features
-4. Remove deprecated flows and update error handling sequences
-5. Update this index with new diagram links and component descriptions
+1. Keep diagrams synchronized with `src/index.ts`, `src/runtime/surface-registry.js`, `src/products/index.js`, and `src/workflows/index.js`.
+2. Do not document tools that are no longer registered at runtime.
+3. For live API diagrams, show the required discovery-before-execution path.
+4. For mutating calls, show `confirmMutation=true` and `mutationReason` as mandatory gates.
+5. For security diagrams, show URL normalization, HTTPS enforcement outside localhost, protected header handling, and upload/download byte limits.
+6. For workflow diagrams, show `sessionToken` as private state and avoid rendering token values in examples.
 
-Generated from comprehensive codebase analysis - keep synchronized with actual implementation.
+## Historical Note
+
+Older media documentation described a Midaz-only proxy with 21 financial tools and stub/fallback backend behavior. That is no longer the current runtime shape. The server now exposes a portfolio-level MCP surface with a unified documentation tool, live product adapters, and guided cross-product workflows.
