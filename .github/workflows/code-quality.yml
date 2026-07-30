@@ -124,6 +124,9 @@ jobs:
   coverage:
     name: Test Coverage
     runs-on: blacksmith-4vcpu-ubuntu-2404
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
