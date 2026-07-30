@@ -17,7 +17,7 @@ permissions:
 jobs:
   validate-release:
     name: Validate Release
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     outputs:
       version: ${{ steps.get_version.outputs.version }}
     steps:
@@ -49,7 +49,7 @@ jobs:
 
   publish-npm:
     name: Publish to NPM Registry
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: validate-release
     steps:
       - name: Checkout code
@@ -117,7 +117,7 @@ jobs:
 
   publish-github-packages:
     name: Publish to GitHub Packages
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: validate-release
     steps:
       - name: Checkout code
@@ -156,7 +156,7 @@ jobs:
 
   create-release-notes:
     name: Update Release Notes
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: [validate-release, publish-npm, publish-github-packages]
     if: github.event_name == 'release'
     steps:

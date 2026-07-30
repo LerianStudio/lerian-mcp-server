@@ -26,7 +26,7 @@ permissions:
 jobs:
   release:
     name: Create Release
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     outputs:
       skip_release: ${{ steps.semantic.outputs.new_release_published == 'false' }}
