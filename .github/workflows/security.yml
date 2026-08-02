@@ -95,7 +95,7 @@ jobs:
       issues: write
     steps:
       - name: Download security reports
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: security-reports
           path: security-reports/
