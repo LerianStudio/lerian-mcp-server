@@ -23,7 +23,7 @@ permissions:
 jobs:
   dual-publish:
     name: Publish to Both Package Names
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Generate GitHub App Token
