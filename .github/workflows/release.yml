@@ -135,10 +135,27 @@ jobs:
       # Legacy name mirror, absorbed from the deleted dual-publish workflow.
       # Same commit, same version, same artifact — only the package name differs.
       # Removal is a wave-2 decision, together with `npm deprecate`.
+      #
+      # The two names have diverged: the legacy one already carries versions
+      # this one never published (4.0.0 among them). Mirroring is therefore
+      # best-effort and idempotent — a version already on the legacy name is
+      # skipped, never republished, and never turns a shipped release red.
       - name: Mirror release to legacy package name
         if: steps.semantic.outputs.new_release_published == 'true'
+        # The real release is already published and tagged by this point. A
+        # failure here is a mirror failure, not a release failure, and must not
+        # paint the run red — it stays visible as a failed step.
+        continue-on-error: true
         run: |
+          set -euo pipefail
+          if npm view "@lerianstudio/midaz-mcp-server@${VERSION}" version >/dev/null 2>&1; then
+            echo "Legacy name already published at ${VERSION} — nothing to mirror."
+            exit 0
+          fi
+          # Restore the real package.json whatever happens next: later steps in
+          # this job must never see the legacy name.
           cp package.json package.json.orig
+          trap 'mv package.json.orig package.json' EXIT
           node -e "
             const pkg = require('./package.json');
             pkg.name = '@lerianstudio/midaz-mcp-server';
@@ -146,6 +163,6 @@ jobs:
             require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2));
           "
           npm publish --access public
-          mv package.json.orig package.json
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ steps.semantic.outputs.new_release_version }}
