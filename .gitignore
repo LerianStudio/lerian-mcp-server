@@ -55,6 +55,7 @@ coverage/
 security-reports/
 semgrep-results.json
 
-# Midaz sub-module
-midaz/
+# Midaz sub-module (root only -- an unanchored `midaz/` would also swallow
+# nested source directories like src/products/midaz/)
+/midaz/
 vendors/
