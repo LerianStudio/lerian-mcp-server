@@ -1,3 +1,13 @@
+## [3.7.1](https://github.com/lerianstudio/lerian-mcp-server/compare/v3.7.0...v3.7.1) (2026-08-18)
+
+
+### Bug Fixes
+
+* clear all 10 npm audit advisories via lockfile bump ([1a2766a](https://github.com/lerianstudio/lerian-mcp-server/commit/1a2766a7c7c416601506592b765b20f1a1000545))
+* **release:** give the version bump conventional semantics ([93ceb51](https://github.com/lerianstudio/lerian-mcp-server/commit/93ceb5140836a391b3c5ee7e22917cd669bfaf9b))
+* **release:** stop the legacy-name mirror from failing a shipped release ([c4fe519](https://github.com/lerianstudio/lerian-mcp-server/commit/c4fe5196325649b3b6ca0d4cc6883076e03f7065))
+* restore the midaz product adapter swallowed by .gitignore ([653d836](https://github.com/lerianstudio/lerian-mcp-server/commit/653d8365fccbaef45a3a0aa3f9a4e13acddfea2f))
+
 # [3.7.0](https://github.com/lerianstudio/lerian-mcp-server/compare/v3.6.0...v3.7.0) (2026-08-02)
 
 # [3.6.0](https://github.com/lerianstudio/lerian-mcp-server/compare/v3.5.0...v3.6.0) (2026-04-29)
