@@ -6,27 +6,30 @@ name: Release Pipeline
 on:
   push:
     branches:
-      - main        # The only release branch (see .releaserc.json)
-  workflow_dispatch:
+      - main        # The only release branch and the only trigger. No
+                    # workflow_dispatch: release secrets must never be handed
+                    # to code from an arbitrary ref.
 
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
-  contents: write
-  packages: write
-  issues: write
-  pull-requests: write
+  contents: read
 
 jobs:
   quality:
     name: Quality Gate
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    # Runs untrusted code (dependency install scripts, repo tests): read-only
+    # token, and no credentials left behind in .git/config for it to reuse.
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -47,6 +50,12 @@ jobs:
     name: Create Release
     runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: quality
+    # The only job that needs write scopes: semantic-release pushes the version
+    # commit and tag, opens the GitHub Release and comments on issues/PRs.
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     outputs:
       skip_release: ${{ steps.semantic.outputs.new_release_published == 'false' }}
       new_release_version: ${{ steps.semantic.outputs.new_release_version }}
