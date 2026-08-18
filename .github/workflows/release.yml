@@ -6,8 +6,7 @@ name: Release Pipeline
 on:
   push:
     branches:
-      - main        # Production releases only
-      - develop     # Pre-releases for testing
+      - main        # The only release branch (see .releaserc.json)
   workflow_dispatch:
 
 concurrency:

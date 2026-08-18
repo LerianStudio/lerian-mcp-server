@@ -65,7 +65,23 @@ Contratos congelados: FC-1 (nomes de config a documentar), FC-4 (veículo único
 
 #### Task 1.1.2: Regras de versionamento e matrix de Node
 
-- [ ] Done
+- [x] Done
+
+> **Decisões tomadas na execução:**
+> - `engines` continua `>=20.19.0`: a lane `sdk-v2` ainda não tem PR aberto, então não há floor
+>   novo para alinhar. Matrix ficou `['20.19', '22']` (as duas pontas do range suportado). Se a
+>   SDK v2 subir o floor, quem fecha aquela lane ajusta o matrix junto.
+> - `dependency-review` do `feature-ci.yml` NÃO foi migrado para o `ci.yml`: o `code-quality.yml`
+>   já roda um job idêntico (mesma action, mesmo `fail-on-severity: moderate`, mesmo trigger de
+>   PR). Migrar duplicaria o check. O que era exclusivo do `feature-ci.yml` — o `npm audit
+>   --audit-level moderate` bloqueante em PR, e os triggers de push `refactor/**` e `docs/**` —
+>   foi absorvido pelo `ci.yml`.
+> - O step "check for uncommitted changes" do `feature-ci.yml` foi descartado: `dist/` é
+>   gitignored e `npm run build` só escreve lá, então o check nunca poderia falhar.
+> - Uma linha do `release.yml` (fora da lista de Files desta task, dentro do Scope do Epic 1.1 e
+>   da fronteira FC-5): o trigger de push em `develop` foi removido, porque tirar `develop` do
+>   `.releaserc.json` o deixou morto — o workflow anunciava um canal de prerelease que deixou de
+>   existir.
 
 **Context:** `.releaserc.json:14-27` mapeia `feat, fix, perf, docs, chore, refactor, test, build, ci` e o catch-all `*` todos para `minor` — não existe patch no fluxo automatizado. Branches: `main` (release) + `develop` (prerelease); `develop` está divergido/obsoleto e será reconciliado na wave 2. CI roda só Node 22.x, mas `engines` declara `>=20.19.0`.
 
