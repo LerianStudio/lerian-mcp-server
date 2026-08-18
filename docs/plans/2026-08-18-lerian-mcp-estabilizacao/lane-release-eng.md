@@ -133,7 +133,28 @@ Contratos congelados: FC-1 (nomes de config a documentar), FC-4 (veículo único
 
 #### Task 1.2.2: Verificação scoped da lane
 
-- [ ] Done
+- [x] Done
+
+> **Resultado da execução:**
+> - Parse verde de todos os YAML/JSON tocados, com checagem estrutural além do parse: todo
+>   `needs:` aponta para job existente, publish confinado ao `release.yml` atrás de
+>   `needs: quality`, `.releaserc.json` alcança patch/minor/major, matrix cobre o floor de
+>   `engines`, README sem os env vars de FC-1. Mesma checagem contra `origin/main` (base
+>   pré-lane) acusa 12 achados — RED antes, verde depois.
+> - `npm run ci:lint` (eslint + tsc) verde. `npm run ci:test` builda limpo e falha exatamente
+>   o defeito pré-existente da base: `test/runtime-surface-registry.test.js`,
+>   `ERR_MODULE_NOT_FOUND` em `src/products/midaz/index.js` — conserto é da lane
+>   `midaz-adapter`. O gate instalado por esta lane bloqueia release até lá, como desenhado.
+> - PR #137 aberto contra `main`, `MERGEABLE` (sem conflito), com o checklist de merge.
+>   Os jobs novos disparam: `Build and Test (20.19)` e `Build and Test (22)` (matrix novo)
+>   e `Security Check` (audit absorvido do `feature-ci.yml`).
+>
+> **Colisão encontrada, decisão do orquestrador (não desta lane):** `check-branch.yml` reprova
+> qualquer PR para `main` vindo de branch que não seja `develop` ou `hotfix/*` — o check falha
+> no PR #137 por política, não por defeito. O plano manda as três lanes da wave 1 ramificarem
+> de e mergearem em `main` enquanto `develop` está divergido e só será reconciliado na wave 2.
+> `check-branch.yml` foi deixado intacto de propósito: a Files desta task é vazia, e afrouxar
+> a guarda de branch é decisão acima da lane. Registrado no PR.
 
 **Context:** workflows só provam comportamento rodando; parte da prova real fica para o PR (CI dispara nos triggers novos) e para a wave 2 (release de verdade).
 
