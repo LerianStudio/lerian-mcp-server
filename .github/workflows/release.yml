@@ -40,7 +40,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint, typecheck, build, test, audit
+      # `ci:all` ends in a non-blocking `npm audit` that only prints. The
+      # blocking dependency audit is the Security Check job in ci.yml, on pull
+      # requests — the release path has no vulnerability floor of its own.
+      - name: Lint, typecheck, build, test
         run: npm run ci:all
 
       # wave 2 slot: boot test of the packed artifact (npm pack -> install -> start
