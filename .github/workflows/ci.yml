@@ -1,8 +1,10 @@
 name: CI
 
-# The single CI workflow. Absorbed `feature-ci.yml` (deleted): its extra branch
-# triggers and its blocking `npm audit` gate live here now. Its dependency-review
-# job was already duplicated by `code-quality.yml`, so it was not carried over.
+# The only workflow that lints, typechecks, builds and tests this repo, and the
+# command it runs is the one the release gate runs. Absorbed `feature-ci.yml`
+# (deleted) together with its extra branch triggers and its blocking `npm audit`;
+# `code-quality.yml` keeps CodeQL and dependency review, `security.yml` the deep
+# custom audit, and neither duplicates the checks below any more.
 
 on:
   push:
