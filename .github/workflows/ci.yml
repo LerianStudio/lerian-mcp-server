@@ -1,8 +1,23 @@
 name: CI
 
+# The only workflow that lints, typechecks, builds and tests this repo, and the
+# command it runs is the one the release gate runs. Absorbed `feature-ci.yml`
+# (deleted) together with its extra branch triggers and its blocking `npm audit`;
+# `code-quality.yml` keeps CodeQL and dependency review, `security.yml` the deep
+# custom audit, and neither duplicates the checks below any more.
+
 on:
   push:
-    branches: [main, develop, 'feature/**', 'fix/**', 'hotfix/**']
+    branches:
+      # No `main`: the release pipeline's quality gate runs this same command
+      # on the same Node matrix for every push there. Listing main would run
+      # the suite three times per push for one signal.
+      - develop
+      - 'feature/**'
+      - 'fix/**'
+      - 'hotfix/**'
+      - 'refactor/**'
+      - 'docs/**'
   pull_request:
     branches: [main, develop]
 
@@ -18,8 +33,10 @@ jobs:
     name: Build and Test
     runs-on: blacksmith-4vcpu-ubuntu-2404
     strategy:
+      fail-fast: false
       matrix:
-        node-version: [22.x]
+        # Both ends of the supported range in package.json `engines`.
+        node-version: ['20.19', '22']
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -33,11 +50,28 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint code
-        run: npm run lint
+      # Same command the release quality gate runs, so "CI green" and
+      # "releasable" cannot drift apart. The `npm audit` at the tail of
+      # `ci:all` only prints — the blocking one is the Security Check job.
+      - name: Lint, typecheck, build, test
+        run: npm run ci:all
 
-      - name: Build TypeScript
-        run: npm run build
+  security:
+    name: Security Check
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Run tests
-        run: npm test
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level moderate

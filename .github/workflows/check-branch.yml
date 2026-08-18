@@ -19,11 +19,11 @@ jobs:
       issues: write
     steps:
       - name: Check if PR is from develop
-        if: github.head_ref != 'develop' && !startsWith(github.head_ref, 'hotfix/')
+        if: github.head_ref != 'develop' && !startsWith(github.head_ref, 'hotfix/') && !startsWith(github.head_ref, 'agent/')
         env:
           HEAD_REF: ${{ github.head_ref }}
         run: |
-          echo "❌ PRs to main branch must come from develop branch or hotfix/* branches"
+          echo "❌ PRs to main must come from develop, hotfix/* or agent/*"
           echo "Current branch: $HEAD_REF"
           echo ""
           echo "Please follow the git flow:"
@@ -31,6 +31,7 @@ jobs:
           echo "2. Merge feature branches to develop"
           echo "3. Create PR from develop to main for releases"
           echo "4. Use hotfix/* branches for emergency fixes to main"
+          echo "5. Use agent/* branches while develop is being reconciled"
           exit 1
 
       - name: Add release label
