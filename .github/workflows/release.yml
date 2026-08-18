@@ -61,10 +61,12 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: quality
     # The only job that needs write scopes: semantic-release pushes the version
-    # commit and tag, opens the GitHub Release and comments on issues/PRs.
+    # commit and tag, opens the GitHub Release and comments on issues/PRs;
+    # `packages` is the GitHub Packages channel below.
     permissions:
       contents: write
       issues: write
+      packages: write
       pull-requests: write
     outputs:
       skip_release: ${{ steps.semantic.outputs.new_release_published == 'false' }}
@@ -141,6 +143,30 @@ jobs:
           GIT_AUTHOR_EMAIL: ${{ secrets.LERIAN_CI_CD_USER_EMAIL }}
           GIT_COMMITTER_NAME: ${{ secrets.LERIAN_CI_CD_USER_NAME }}
           GIT_COMMITTER_EMAIL: ${{ secrets.LERIAN_CI_CD_USER_EMAIL }}
+
+      # channel continuation pending product decision (see plan deviations)
+      - name: Publish to GitHub Packages
+        if: steps.semantic.outputs.new_release_published == 'true'
+        # npm is published, tagged and released by this point: a failure on the
+        # secondary channel stays a red step, never a red release.
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          # Restore the real package.json whatever happens next: no later step
+          # may inherit the GitHub Packages registry.
+          cp package.json package.json.orig
+          trap 'mv package.json.orig package.json' EXIT
+          # `publishConfig.registry` outranks both --registry and .npmrc, so
+          # rewriting it is the only way to redirect this publish.
+          node -e "
+            const pkg = require('./package.json');
+            pkg.publishConfig = { registry: 'https://npm.pkg.github.com', access: 'public' };
+            require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+          "
+          echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Legacy name mirror, absorbed from the deleted dual-publish workflow.
       # Same commit, same version, same artifact — only the package name differs.
