@@ -63,13 +63,12 @@ jobs:
     name: Create Release
     runs-on: blacksmith-4vcpu-ubuntu-2404
     needs: quality
-    # The only job that needs write scopes: semantic-release pushes the version
-    # commit and tag, opens the GitHub Release and comments on issues/PRs;
-    # `packages` is the GitHub Packages channel below.
+    # Write scopes for semantic-release only: it pushes the version commit and
+    # tag, opens the GitHub Release and comments on issues/PRs. The GitHub
+    # Packages channel lives in its own job below, with its own scopes.
     permissions:
       contents: write
       issues: write
-      packages: write
       pull-requests: write
     outputs:
       skip_release: ${{ steps.semantic.outputs.new_release_published == 'false' }}
@@ -150,18 +149,54 @@ jobs:
           GIT_COMMITTER_NAME: ${{ secrets.LERIAN_CI_CD_USER_NAME }}
           GIT_COMMITTER_EMAIL: ${{ secrets.LERIAN_CI_CD_USER_EMAIL }}
 
-      # channel continuation pending product decision (see plan deviations)
+  # channel continuation pending product decision (see plan deviations)
+  #
+  # Secondary channel in its own job so npm and GitHub Packages fail
+  # independently: the npm release is shipped and green by the time this runs,
+  # and a failure here is a red job that "re-run failed jobs" can retry on its
+  # own: `needs.publish.outputs` survive failed-job reruns, and the version
+  # guard below makes the retry idempotent.
+  github-packages:
+    name: Publish to GitHub Packages
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    needs: publish
+    if: needs.publish.outputs.skip_release == 'false'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      # The release tag is the commit semantic-release just pushed, so
+      # package.json already carries the released version.
+      - name: Checkout release tag
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.publish.outputs.new_release_version }}
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # Same reasoning as the other jobs: no lockfile package declares an
+      # install script, and the build below is explicit.
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build for release
+        run: npm run build:release
+
+      # The artifact is already built above; --ignore-scripts keeps the
+      # redundant `prepare` hook away from the publish credentials.
       - name: Publish to GitHub Packages
-        if: steps.semantic.outputs.new_release_published == 'true'
-        # npm is published, tagged and released by this point: a failure on the
-        # secondary channel stays a red step, never a red release.
-        continue-on-error: true
         run: |
           set -euo pipefail
-          # Restore the real package.json whatever happens next: no later step
-          # may inherit the GitHub Packages registry.
-          cp package.json package.json.orig
-          trap 'mv package.json.orig package.json' EXIT
+          echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
+          if npm view "@lerianstudio/lerian-mcp-server@${VERSION}" version --registry=https://npm.pkg.github.com >/dev/null 2>&1; then
+            echo "GitHub Packages already has ${VERSION}; nothing to publish."
+            exit 0
+          fi
           # `publishConfig.registry` outranks both --registry and .npmrc, so
           # rewriting it is the only way to redirect this publish.
           node -e "
@@ -169,7 +204,7 @@ jobs:
             pkg.publishConfig = { registry: 'https://npm.pkg.github.com', access: 'public' };
             require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2));
           "
-          echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
-          npm publish
+          npm publish --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.publish.outputs.new_release_version }}
