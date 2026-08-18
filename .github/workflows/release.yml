@@ -21,6 +21,13 @@ jobs:
   quality:
     name: Quality Gate
     runs-on: blacksmith-4vcpu-ubuntu-2404
+    strategy:
+      fail-fast: false
+      matrix:
+        # Both ends of the supported range in package.json `engines`, same as
+        # ci.yml — the publish job waits on every leg, so nothing ships that
+        # fails on the declared Node floor.
+        node-version: ['20.19', '22']
     # Runs untrusted code (dependency install scripts, repo tests): read-only
     # token, and no credentials left behind in .git/config for it to reuse.
     permissions:
@@ -31,10 +38,10 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup Node.js
+      - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: ${{ matrix.node-version }}
           cache: 'npm'
 
       - name: Install dependencies
