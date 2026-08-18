@@ -44,8 +44,11 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
 
+      # No package in the lockfile declares an install script, so skipping them
+      # installs the same tree while keeping arbitrary dependency code from
+      # running here. The build below is explicit and unaffected.
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       # `ci:all` ends in a non-blocking `npm audit` that only prints. The
       # blocking dependency audit is the Security Check job in ci.yml, on pull
@@ -93,8 +96,11 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      # Same reasoning as the gate, and it matters more here: this job holds the
+      # npm token, the GPG key and the GitHub App token. No lockfile package
+      # declares an install script, so nothing is lost by refusing to run them.
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Build for release
         run: npm run build:release
