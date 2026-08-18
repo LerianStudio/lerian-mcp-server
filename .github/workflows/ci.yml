@@ -9,7 +9,9 @@ name: CI
 on:
   push:
     branches:
-      - main
+      # No `main`: the release pipeline's quality gate runs this same command
+      # on the same Node matrix for every push there. Listing main would run
+      # the suite three times per push for one signal.
       - develop
       - 'feature/**'
       - 'fix/**'
