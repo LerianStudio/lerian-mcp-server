@@ -223,6 +223,9 @@ na fronteira de nenhuma lane e `package.json` é da lane `sdk-v2` — por FC-5 (
 própria lista = parar e re-cortar"), esta lane para e escala. **Ação necessária:** deletar
 `scripts/dual-publish.js` e a linha `publish:dual`, atribuído à lane `sdk-v2` ou à wave 2. O
 espelho do nome legado já vive no `release.yml`; o script não tem outra função.
+**Resolvido em parte no fix pass:** o orquestrador ampliou a fronteira desta lane para incluir
+`scripts/dual-publish.js`, que foi deletado. Sobra a linha `publish:dual`, ainda da `sdk-v2` —
+ver Deviations no fim deste documento.
 
 **2. A Merge Order publica o 4.0.0 pelo pipeline antigo.** Como está escrita no `index.md`,
 `midaz-adapter` merga primeiro — e nesse momento a `main` ainda tem o `release.yml` velho (sem
@@ -262,3 +265,70 @@ com a versão ANTERIOR. Não introduzido por esta lane e fora de FC-5 (`scripts/
 **Verification:** parse verde local; CI do PR executa os jobs novos.
 
 **Done when:** pipeline validado até onde é possível sem publicar; checklist de merge no PR.
+
+#### Task 1.3.3: Fix pass do orquestrador
+
+- [x] Done
+
+**Resultado da execução (uma correção por commit):**
+
+1. **O canal GitHub Packages voltou, atrás do gate.** Deletar o `package-manager.yml` tinha
+   descontinuado silenciosamente um canal vivo — 3.7.0 está publicado em `npm.pkg.github.com`
+   desde 02-08-2026 e as release notes públicas documentam a instalação de lá. Voltou como step
+   do job `publish`, herdando `needs: quality` no lugar do gatilho `release: published`, que não
+   passava por check nenhum. Detalhe que faz o step funcionar: `publishConfig.registry` do
+   `package.json` ganha de `--registry` e do `.npmrc`, então o step reescreve esse campo e
+   restaura o arquivo por `trap`. `continue-on-error` porque nesse ponto o npm já publicou e
+   taggeou — falha de canal secundário não pode pintar de vermelho um release entregue.
+2. **O espelho do nome legado saiu.** Ver Deviations.
+3. **O gate roda nas duas pontas do range de Node.** Rodava só em 22 enquanto `engines` declara
+   `>=20.19.0` — quebra no piso chegava ao npm sem barreira. O `strategy.matrix` com
+   `['20.19', '22']` no job `quality` chegou pelo Codesmith (commit `860527f`, direto na branch,
+   durante este fix pass); `needs: quality` espera todas as pernas. Esta lane ficou com o outro
+   lado da troca: `main` saiu dos triggers de push do `ci.yml`, que rodava exatamente o mesmo
+   comando — sem isso a suíte rodaria três vezes por push na `main` para produzir um sinal só.
+   PRs para `main` e as demais branches não mudam. Junto foi o nome das pernas do gate
+   (`Quality Gate (Node <versão>)`): com `name:` fixo o GitHub batiza os dois checks igual, o que
+   os torna indistinguíveis em branch protection.
+4. **`npm ci --ignore-scripts` nos dois jobs.** `npm ci` executa scripts de lifecycle de toda a
+   árvore de dependências — no job de publish isso acontece sob o token do npm, a chave GPG e o
+   token do GitHub App; no gate, antes de qualquer verificação. Zero dos 213 pacotes do
+   `package-lock.json` declara install script, então a flag produz árvore idêntica e elimina a
+   superfície de execução. Os dois jobs buildam explicitamente no step seguinte — nada dependia
+   do `prepare` disparar durante o install.
+5. **`scripts/dual-publish.js` deletado.** Ver Deviations.
+
+**Verification:** parse YAML de todos os workflows verde (pacote `yaml`, já em `node_modules`);
+`grep -rn "npm publish" .github/workflows/` retorna só o step do GitHub Packages no `release.yml`
+(o publish no npmjs é do semantic-release, no mesmo arquivo); `strategy.matrix` do `quality` e
+`needs: quality` do `publish` conferidos via parse, não por leitura; contagem de
+`hasInstallScript` no `package-lock.json` = 0 de 213.
+
+---
+
+## Deviations
+
+**1. Canal GitHub Packages: continuidade pendente de decisão de produto.** O canal foi restaurado
+atrás do gate para não quebrar consumidores no 4.0.0, mas ele nunca foi documentado no README e
+não se sabe quem puxa de lá. Manter dois registries dobra a superfície de publicação para sempre;
+descontinuar quebra quem estiver usando. É decisão de produto, não de engenharia de release — o
+step carrega o comentário `channel continuation pending product decision (see plan deviations)`.
+Se a decisão for descontinuar, a execução é apagar um step do `release.yml`.
+
+**2. Espelho do nome legado removido, em vez de mantido até a wave 2.** O plano original (Task
+1.1.1) mandava manter o espelho de `@lerianstudio/midaz-mcp-server` até a deprecação formal.
+Removido antes por três razões: o registry já tem um **4.0.0 divergente** publicado nesse nome —
+versão que o pacote real nunca publicou — então na versão-alvo desta wave a guarda de idempotência
+curto-circuita e o step vira no-op silencioso, exatamente no release para o qual ele existia; a
+wave 2 aposenta o nome inteiro via `npm deprecate`; e um espelho que não publica nada é manutenção
+pura. **Consequência para a wave 2:** aquele 4.0.0 no nome legado é um fato do registry, não um
+defeito desta lane, e não corresponde a nenhum artefato desta base — quem rodar o `npm deprecate`
+precisa saber disso antes de mexer no nome.
+
+**3. `scripts/dual-publish.js` deletado por esta lane; `publish:dual` fica com a `sdk-v2`.** A
+escalação 1 da Task 1.3.2 atribuía o conserto inteiro a outra lane, por FC-5. O orquestrador
+ampliou a fronteira desta lane para incluir esse arquivo e ele foi deletado: o script publicava
+nos dois nomes sem lint, typecheck ou teste — um quinto caminho de publish que qualquer pessoa com
+token npm rodava do laptop, contradizendo FC-4 literalmente. **Pendente:** a linha
+`"publish:dual": "node scripts/dual-publish.js"` no `package.json`, que agora aponta para arquivo
+inexistente. Remoção atribuída à lane `sdk-v2`, dona do `package.json` por FC-5.
