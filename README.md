@@ -53,7 +53,7 @@ Add the same MCP server block to your client's MCP configuration:
 
 ### Supported Products
 
-- **Midaz**: financial ledger platform with onboarding, balances, transactions, CRM, and ledger services.
+- **Midaz**: unified double-entry ledger — organizations, ledgers, accounts, balances, transactions, and CRM behind a single service.
 - **Fetcher**: datasource connection, schema discovery, and asynchronous extraction service.
 - **Reporter**: template-driven report generation, datasource management, metrics, and artifacts.
 - **Matcher**: reconciliation engine for matching Midaz transactions against external systems.
@@ -224,17 +224,17 @@ Create or update configuration interactively:
 npx -y -p @lerianstudio/lerian-mcp-server@latest lerian-mcp-config
 ```
 
+Midaz is a single unified ledger service reached through one base URL. Onboarding, accounts, balances, transactions, and CRM are all resources of that one service, so there is exactly one Midaz URL to configure.
+
 Common environment variables:
 
 ```bash
 LERIAN_DOCS_URL=https://docs.lerian.studio
 LOG_LEVEL=info
 
-MIDAZ_ONBOARDING_URL=http://localhost:3000
-MIDAZ_TRANSACTION_URL=http://localhost:3001
-MIDAZ_CRM_URL=http://localhost:3002
-MIDAZ_LEDGER_URL=http://localhost:3003
+MIDAZ_BASE_URL=http://localhost:3002
 MIDAZ_AUTH_TOKEN=...
+MIDAZ_API_TIMEOUT=30000
 
 FETCHER_MANAGER_URL=http://localhost:4006
 FETCHER_AUTH_TOKEN=...
@@ -255,6 +255,10 @@ FLOWKER_API_KEY=...
 UNDERWRITER_BASE_URL=http://localhost:8080
 UNDERWRITER_AUTH_TOKEN=...
 ```
+
+### Migrating to 4.0.0
+
+Breaking change: Midaz configuration. Releases before 4.0.0 expected four separate Midaz URLs, one per legacy service (onboarding, transaction, CRM, ledger). Those variables are gone — they are not read and not accepted. Point `MIDAZ_BASE_URL` at your unified Midaz ledger instead, and keep `MIDAZ_AUTH_TOKEN` as is. Nothing else in the configuration changed.
 
 ---
 
@@ -339,10 +343,9 @@ Useful scripts:
 
 ## Package Information
 
-- **npm package:** `@lerianstudio/lerian-mcp-server`
-- **Current package version:** `3.4.0`
+- **npm package:** [`@lerianstudio/lerian-mcp-server`](https://www.npmjs.com/package/@lerianstudio/lerian-mcp-server) — the npm page and the [GitHub releases](https://github.com/lerianstudio/lerian-mcp-server/releases) carry the current version and changelog.
 - **Runtime:** Node.js ESM
-- **MCP SDK:** `@modelcontextprotocol/sdk`
+- **Transport:** stdio only
 - **License:** Apache-2.0
 - **Repository:** [github.com/lerianstudio/lerian-mcp-server](https://github.com/lerianstudio/lerian-mcp-server)
 
@@ -353,7 +356,7 @@ Useful scripts:
 ```text
 MCP Client
   -> stdio transport
-  -> McpServer from @modelcontextprotocol/sdk
+  -> MCP server runtime
   -> core tools and prompts
   -> product adapters
   -> product routers and schema registries

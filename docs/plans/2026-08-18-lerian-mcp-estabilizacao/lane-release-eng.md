@@ -107,7 +107,18 @@ Contratos congelados: FC-1 (nomes de config a documentar), FC-4 (veículo único
 
 #### Task 1.2.1: Reescrever as seções de instalação e configuração do README
 
-- [ ] Done
+- [x] Done
+
+> **Decisões tomadas na execução:**
+> - A tabela de tools já batia com FC-2 (16 nomes, conferidos contra
+>   `test/runtime-surface-registry.test.js`) — nenhuma edição necessária ali.
+> - O bloco "Package Information" citava `@modelcontextprotocol/sdk` como SDK do pacote. Como a
+>   lane `sdk-v2` troca isso por `@modelcontextprotocol/server` 2.0.0, a linha seria um fóssil
+>   novo no 4.0.0 — foi removida (detalhe de implementação que nenhum consumidor precisa), junto
+>   com a mesma menção no diagrama de arquitetura. Entrou no lugar a linha de transporte
+>   (`stdio only`), que é o que o usuário de fato precisa saber.
+> - A nota de migração 4.0.0 descreve os quatro env vars legados sem soletrá-los: a Verification
+>   desta task é justamente um grep por esses nomes no README.
 
 **Context:** o README anuncia "current package version 3.4.0" (`README.md:340-346`) com o pacote em 3.7.0, e documenta a configuração Midaz multi-serviço legada.
 
