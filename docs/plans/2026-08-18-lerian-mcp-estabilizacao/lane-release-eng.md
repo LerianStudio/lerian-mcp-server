@@ -41,7 +41,15 @@ Contratos congelados: FC-1 (nomes de config a documentar), FC-4 (veículo único
 
 #### Task 1.1.1: Gatear `release.yml` e absorver o dual-publish
 
-- [ ] Done
+- [x] Done
+
+> **Achado durante a execução:** existia um QUARTO caminho de publish não previsto no plano —
+> `package-manager.yml`, disparado por `release: published`. Como o semantic-release cria a
+> release do GitHub com token de GitHub App (não `GITHUB_TOKEN`), esse workflow disparava a
+> cada release e republicava no npm além de publicar no GitHub Packages (canal não
+> documentado em nenhum lugar do repo). Está dentro da fronteira FC-5 (`.github/workflows/**`)
+> e viola FC-4, então foi deletado junto com os outros dois — sem ele a Verification desta
+> task (grep mostrando publish só em `release.yml`) é impossível de passar.
 
 **Context:** `release.yml` roda checkout → Node 22 → `npm ci` → `npm run build:release` → GPG → semantic-release, SEM testes e SEM dependência do `ci.yml`. `dual-publish.yml` dispara em push na main de forma independente, publica `@lerianstudio/lerian-mcp-server` e depois reescreve o nome para `@lerianstudio/midaz-mcp-server` (deprecated) e publica de novo — dois workflows publicando a mesma main sem coordenação.
 
