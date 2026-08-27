@@ -7,7 +7,7 @@
 
 **Goal:** `@lerianstudio/lerian-mcp-server@latest` volta a inicializar, com o produto Midaz migrado para o padrão de adapters contra o ledger unificado, a SDK MCP migrada para a v2 (spec 2026-07-28), e o release passa a ser um pipeline único travado em CI verde — publicação única (4.0.0) com os 7 produtos.
 
-**Architecture:** o servidor é um MCP stdio em Node, com um adapter por produto (`src/products/<produto>/{index,client,router,schemas}`) sobre helpers compartilhados (`src/products/http-helpers.js`, `schema-registry.js`) e um wrapper único de registro de tools (`src/util/mcp-registration.js`) que isola a SDK. O Midaz hoje vive numa implementação legada paralela (`src/api/*`) apontando para a topologia antiga de 4 serviços (portas 3000–3003); o Midaz real é um serviço unificado numa porta (default `:3002`) com spec OpenAPI canônica commitada (`components/ledger/api/openapi.huma.yaml`, v2 vivo, v1 deprecado). A SDK atual (`@modelcontextprotocol/sdk` ^1.29) foi aposentada upstream: a v2 (2026-07-28) reparte em `@modelcontextprotocol/server`/`client` + adapters. O release hoje tem três workflows de publish independentes e nenhum roda testes antes do `npm publish`.
+**Architecture:** o servidor é um MCP stdio em Node, com um adapter por produto (`src/products/<produto>/{index,client,router,schemas}`) sobre helpers compartilhados (`src/products/http-helpers.js`, `schema-registry.js`) e um wrapper único de registro de tools (`src/util/mcp-registration.js`) que isola a SDK. O Midaz hoje vive numa implementação legada paralela (`src/api/*`) apontando para a topologia antiga de 4 serviços (portas 3000–3003); o Midaz real é um serviço unificado numa porta (default `:3002`) com spec OpenAPI canônica commitada (`components/ledger/api/openapi.huma.yaml`, v2 vivo, v1 deprecado). A SDK atual (`@modelcontextprotocol/sdk` ^1.29) foi aposentada upstream: a v2 (2026-07-28) reparte em `@modelcontextprotocol/server`/`client` + adapters. O baseline tinha três workflows de publish independentes; o PR #137 os consolidou, mas o job único ainda não executa a suíte completa, o dry-run exato nem o boot do pacote antes da etapa publicadora.
 
 **Tech Stack:** Node >=20.19.0 (ESM), TypeScript (entry `src/index.ts`, resto JS), `node:test`, zod, semantic-release, GitHub Actions, `@modelcontextprotocol/server` 2.0.0 (alvo).
 
@@ -23,15 +23,15 @@
 |------|----------|-----------|------|-------------------|------|--------|
 | midaz-adapter | Servidor sobe com os 7 produtos; Midaz no padrão de adapters contra o ledger unificado (v2); legado `src/api/` removido | none | 1 | `/srv/worktrees/mcp-midaz-adapter` / `agent/mcp-midaz-adapter` | lane-midaz-adapter.md | Pending — sem PR remoto; não entregue |
 | sdk-v2 | Servidor rodando sobre `@modelcontextprotocol/server` 2.0.0; wrapper `registerMcpTool` com assinatura preservada; pacote monolítico removido | none | 1 | `/srv/worktrees/mcp-sdk-v2` / `agent/mcp-sdk-v2` | lane-sdk-v2.md | Pending — sem PR remoto; não entregue |
-| release-eng | Pipeline de release único e gated em testes; workflows redundantes removidos; README e regras de versão corrigidos | none | 1 | `/srv/worktrees/mcp-release-eng` / `agent/mcp-release-eng` | lane-release-eng.md | Merged — [PR #137](https://github.com/LerianStudio/lerian-mcp-server/pull/137), 2026-08-18 |
-| integration-release | Teste de boot do artefato empacotado no CI; release 4.0.0 publicado e smoke-testado; deprecação do pacote legado; develop reconciliado | midaz-adapter, sdk-v2, release-eng | 2 | `/srv/worktrees/mcp-integration-release` / `agent/mcp-integration-release` | (deferred — authored when wave 1 merges) | Pending — bloqueada por `midaz-adapter` e `sdk-v2` |
+| release-eng | Pipeline de release único; workflows redundantes removidos; README e regras de versão corrigidos | none | 1 | `/srv/worktrees/mcp-release-eng` / `agent/mcp-release-eng` | lane-release-eng.md | Merged — [PR #137](https://github.com/LerianStudio/lerian-mcp-server/pull/137), 2026-08-18; gates pré-publish completos ainda pendentes |
+| integration-release | Gates pré-publish completos e boot do artefato empacotado no CI; release 4.0.0 publicado e smoke-testado; deprecação do pacote legado; develop reconciliado | midaz-adapter, sdk-v2, release-eng | 2 | `/srv/worktrees/mcp-integration-release` / `agent/mcp-integration-release` | (deferred — authored when wave 1 merges) | Pending — bloqueada por `midaz-adapter` e `sdk-v2` |
 
 `Status` lifecycle: Pending → In flight → In review → Merged | Failed.
 The orchestrator session owns this column. Lanes never write to this file.
 
 ### Status atual — GitHub verificado em 2026-08-27
 
-`release-eng` está concluída no ciclo de PR remoto: o [PR #137](https://github.com/LerianStudio/lerian-mcp-server/pull/137) (`ci: consolidate release into one gated pipeline`) foi mergeado em `main` em 2026-08-18. As mudanças mergeadas incluem o workflow de release consolidado e seu gate de CI. O merge commit de #137 ainda não é ancestral de `origin/develop`; esta atualização de documentação não o promove para essa branch.
+`release-eng` está concluída no ciclo de PR remoto: o [PR #137](https://github.com/LerianStudio/lerian-mcp-server/pull/137) (`ci: consolidate release into one gated pipeline`) foi mergeado em `main` em 2026-08-18. As mudanças mergeadas consolidam o workflow, mas o job atual ainda executa apenas `npm ci` e `npm run build:release` antes do semantic-release; `npm run ci:all`, o dry-run que prova exatamente `4.0.0` e o boot do artefato empacotado continuam pendentes e bloqueiam publicação. O merge commit de #137 ainda não é ancestral de `origin/develop`; esta atualização de documentação não o promove para essa branch.
 
 Nesta verificação não há PR remoto para `midaz-adapter` nem para `sdk-v2`. Branches ou worktrees locais não são evidência de entrega; ambas permanecem Pending e não são marcadas como entregues. Consequentemente, `integration-release` continua bloqueada: seu plano deferred não é autorado e a wave 2 não pode começar até as duas lanes restantes da wave 1 serem mergeadas.
 
@@ -40,7 +40,7 @@ Nota de ambiente: nesta máquina (mordor) os worktrees são criados com `agent n
 ## Waves
 
 - **Wave 1** — `release-eng` está Merged em `main` via [PR #137](https://github.com/LerianStudio/lerian-mcp-server/pull/137), mas esse merge ainda não está em `develop`. `midaz-adapter` e `sdk-v2` permanecem Pending: nenhuma tem evidência de PR remoto, portanto não são tratadas como entregues.
-- **Wave 2** — `integration-release` continua bloqueada até as três lanes da wave 1 estarem Merged. O gate de `release-eng` está satisfeito, mas `midaz-adapter` e `sdk-v2` ainda bloqueiam a autoria do plano deferred e o início da wave 2.
+- **Wave 2** — `integration-release` continua bloqueada até as três lanes da wave 1 estarem Merged. A consolidação de `release-eng` está entregue, mas seus gates pré-publish ainda precisam ser completados nesta wave; `midaz-adapter` e `sdk-v2` bloqueiam a autoria do plano deferred e o início da execução.
 
 **Estado da base (reconciliado em 2026-08-27):** a falha de import anteriormente registrada para `src/products/midaz/index.js` não existe mais em `main`: o arquivo entrou no [PR #137](https://github.com/LerianStudio/lerian-mcp-server/pull/137). Em checkout limpo da `main`, `npm run build && npm test` passa. A exceção histórica de verificação standalone não deve ser usada para marcar `midaz-adapter` ou `sdk-v2` como entregues; ambas ainda exigem PR remoto e merge.
 
@@ -61,7 +61,13 @@ Escritos antes de qualquer lane começar. Nenhuma lane os altera; se uma precisa
 }
 // REMOVIDOS (não documentar, não ler, não aceitar):
 // MIDAZ_ONBOARDING_URL, MIDAZ_TRANSACTION_URL, MIDAZ_CRM_URL, MIDAZ_LEDGER_URL
+// MIDAZ_BACKEND_ONBOARDING_URL, MIDAZ_BACKEND_TRANSACTION_URL, MIDAZ_BACKEND_URL
 ```
+
+As verificações de ausência cobrem produtores e consumidores desses nomes: entrypoint
+NPX, config, validador, allowlist de segurança, exemplos de ambiente, mensagens de erro,
+README e testes. Depois da lane, somente `config.midazApi.{baseUrl,authToken,timeout}` e
+seus três env vars FC-1 permanecem suportados.
 
 ### FC-2 — Superfície de tools do release (critério de aceite da wave 2)
 
@@ -80,14 +86,21 @@ tracer-execute, underwriter-discover, underwriter-execute
 
 ### FC-4 — Versão e veículo do release
 
-Alvo `4.0.0` (major: contrato de configuração FC-1 quebra env vars publicados; SDK major). Publicado exclusivamente pelo pipeline consolidado da lane `release-eng` (semantic-release na `main`, gated em `npm run ci:all` verde + teste de boot do artefato na wave 2). Nenhum publish manual, nenhum publish fora desse caminho. A versão final é computada pelo semantic-release a partir dos conventional commits (commit com `BREAKING CHANGE` garantido pela FC-1).
+Alvo `4.0.0` (major: contrato de configuração FC-1 quebra env vars publicados; SDK major). A publicação permanece bloqueada até a `integration-release` endurecer o job consolidado da `release-eng` para executar, nesta ordem, `npm run ci:all`, dry-run do semantic-release resolvendo exatamente `4.0.0` e boot do artefato produzido por `npm pack`, todos verdes antes do semantic-release com publicação. Nenhum publish manual, nenhum publish fora desse caminho. O squash/merge da FC-1 DEVE carregar um footer `BREAKING CHANGE:` reconhecido pelo semantic-release; qualquer versão diferente de `4.0.0` interrompe a lane.
 
-### FC-5 — Fronteira de arquivos da wave 1
+### FC-5 — Fronteira de arquivos das lanes
 
-`midaz-adapter`: `src/products/midaz/**` (novo), `src/tools/midaz-*.js`, `src/api/**` (remoção), `src/workflows/matcher-fetcher-midaz.js`, `src/config.js`, `.env.example`, `src/bin/midaz-mcp-server.js` (remoção), `test/product-routing-config.test.js`.
+`midaz-adapter`: `src/products/midaz/**` (novo), `src/tools/midaz-*.js`, `src/api/**` (remoção), `src/workflows/matcher-fetcher-midaz.js`, `src/config.js`, `src/util/config-validator.js`, `src/util/security.js`, `scripts/create-env-example.js`, `.env.example`, `src/bin/lerian-mcp-server.js`, `src/bin/midaz-mcp-server.js` (remoção), `test/product-routing-config.test.js` e testes focados de ausência dos sete env vars legados de FC-1, incluindo as atribuições no launcher NPX `src/bin/lerian-mcp-server.js`.
 `sdk-v2`: `package.json`, `package-lock.json`, `src/index.ts`, `src/util/mcp-registration.js`, `src/types/**`, `tsconfig.json` (se necessário), testes próprios novos.
 `release-eng`: `.github/workflows/**`, `.releaserc.json`, `README.md`.
-Interseção vazia por construção. Um arquivo fora da própria lista = parar e re-cortar.
+`integration-release`: exceção estreita de ownership sobre `.github/workflows/release.yml`
+somente para inserir, antes da etapa publicadora existente, os três gates obrigatórios de
+FC-4: `npm run ci:all`, dry-run resolvendo exatamente `4.0.0` e boot do artefato já
+empacotado. Não pode criar ou alterar triggers, credenciais, a etapa de publicação,
+versionamento ou qualquer outro workflow; FC-4 e a ownership de publishing da
+`release-eng` permanecem intactas.
+Fora dessa exceção explícita, a interseção é vazia por construção. Um arquivo fora da
+própria lista = parar e re-cortar.
 
 ## Integration Lane
 
@@ -96,10 +109,10 @@ Interseção vazia por construção. Um arquivo fora da própria lista = parar e
 ### Lane: integration-release
 
 **Goal:** 4.0.0 publicado, funcional e verificado; repositório sem restos do mundo legado.
-**Scope:** teste de boot do artefato (`npm pack` → instalar → subir → assertar FC-2) wired no CI como gate de release; verificação de ausência (`src/api/` inexistente; nenhuma referência aos env vars legados de FC-1; nenhuma importação de `@modelcontextprotocol/sdk` remanescente; nenhum workflow de publish fora do pipeline de FC-4); reconciliação de `develop` com `main` (ação destrutiva — confirmar com Fred antes do force-push); execução do release 4.0.0; `npm deprecate` do pacote legado `@lerianstudio/midaz-mcp-server` com mensagem apontando o novo; smoke test do artefato publicado (`npx @lerianstudio/lerian-mcp-server@latest` sobe e anuncia FC-2).
+**Scope:** endurecer o job publicador existente para executar `npm run ci:all`, dry-run do semantic-release resolvendo exatamente `4.0.0` e teste de boot do artefato (`npm pack` → instalar → subir com deadline explícito → assertar FC-2 → encerrar o servidor e limpar processos/recursos), todos antes da etapa publicadora e sob a exceção estreita de FC-5; verificação de ausência (`src/api/` inexistente; nenhuma referência aos sete env vars legados de FC-1; nenhuma importação de `@modelcontextprotocol/sdk` remanescente; nenhum workflow de publish fora do pipeline de FC-4); reconciliação de `develop` com `main` (ação destrutiva — confirmar com Fred antes do force-push); execução do release 4.0.0; `npm deprecate` do pacote legado `@lerianstudio/midaz-mcp-server` com mensagem apontando o novo; smoke test do artefato publicado (`npx @lerianstudio/lerian-mcp-server@latest` sobe e anuncia FC-2).
 **Depends on:** midaz-adapter, sdk-v2, release-eng (todas Merged).
 **Gate atual (GitHub verificado em 2026-08-27):** bloqueada por `midaz-adapter` e `sdk-v2`; `release-eng` já está Merged no [PR #137](https://github.com/LerianStudio/lerian-mcp-server/pull/137). Não autorar nem iniciar esta lane até que as duas dependências restantes tenham evidência de PR remoto mergeado.
-**Done when:** `npx @lerianstudio/lerian-mcp-server@latest` inicializa em ambiente limpo com a superfície FC-2; pacote legado deprecado; `develop` reconciliado.
+**Done when:** `npm run ci:all`, dry-run exato e boot do pacote bloqueiam a etapa publicadora e passam; o dry-run resolve exatamente `4.0.0`; `npx @lerianstudio/lerian-mcp-server@latest` inicializa em ambiente limpo com a superfície FC-2; pacote legado deprecado; `develop` reconciliado.
 
 ## Merge Order
 
