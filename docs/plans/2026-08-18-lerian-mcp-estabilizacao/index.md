@@ -19,22 +19,28 @@
 
 | Lane | Delivers | Depends on | Wave | Worktree / Branch | Plan | Status |
 |------|----------|-----------|------|-------------------|------|--------|
-| midaz-adapter | Servidor sobe com os 7 produtos; Midaz no padrão de adapters contra o ledger unificado (v2); legado `src/api/` removido | none | 1 | `/srv/worktrees/mcp-midaz-adapter` / `agent/mcp-midaz-adapter` | lane-midaz-adapter.md | Pending |
-| sdk-v2 | Servidor rodando sobre `@modelcontextprotocol/server` 2.0.0; wrapper `registerMcpTool` com assinatura preservada; pacote monolítico removido | none | 1 | `/srv/worktrees/mcp-sdk-v2` / `agent/mcp-sdk-v2` | lane-sdk-v2.md | Pending |
-| release-eng | Pipeline de release único e gated em testes; workflows redundantes removidos; README e regras de versão corrigidos | none | 1 | `/srv/worktrees/mcp-release-eng` / `agent/mcp-release-eng` | lane-release-eng.md | Pending |
-| integration-release | Teste de boot do artefato empacotado no CI; release 4.0.0 publicado e smoke-testado; deprecação do pacote legado; develop reconciliado | midaz-adapter, sdk-v2, release-eng | 2 | `/srv/worktrees/mcp-integration-release` / `agent/mcp-integration-release` | (deferred — authored when wave 1 merges) | Pending |
+| midaz-adapter | Servidor sobe com os 7 produtos; Midaz no padrão de adapters contra o ledger unificado (v2); legado `src/api/` removido | none | 1 | `/srv/worktrees/mcp-midaz-adapter` / `agent/mcp-midaz-adapter` | lane-midaz-adapter.md | Pending — sem PR remoto; não entregue |
+| sdk-v2 | Servidor rodando sobre `@modelcontextprotocol/server` 2.0.0; wrapper `registerMcpTool` com assinatura preservada; pacote monolítico removido | none | 1 | `/srv/worktrees/mcp-sdk-v2` / `agent/mcp-sdk-v2` | lane-sdk-v2.md | Pending — sem PR remoto; não entregue |
+| release-eng | Pipeline de release único e gated em testes; workflows redundantes removidos; README e regras de versão corrigidos | none | 1 | `/srv/worktrees/mcp-release-eng` / `agent/mcp-release-eng` | lane-release-eng.md | Merged — [PR #137](https://github.com/LerianStudio/lerian-mcp-server/pull/137), 2026-08-18 |
+| integration-release | Teste de boot do artefato empacotado no CI; release 4.0.0 publicado e smoke-testado; deprecação do pacote legado; develop reconciliado | midaz-adapter, sdk-v2, release-eng | 2 | `/srv/worktrees/mcp-integration-release` / `agent/mcp-integration-release` | (deferred — authored when wave 1 merges) | Pending — bloqueada por `midaz-adapter` e `sdk-v2` |
 
 `Status` lifecycle: Pending → In flight → In review → Merged | Failed.
 The orchestrator session owns this column. Lanes never write to this file.
+
+### Status atual — GitHub verificado em 2026-08-27
+
+`release-eng` está concluída: o [PR #137](https://github.com/LerianStudio/lerian-mcp-server/pull/137) (`ci: consolidate release into one gated pipeline`) foi mergeado em `main` em 2026-08-18. As mudanças mergeadas incluem o workflow de release consolidado e seu gate de CI.
+
+Nesta verificação não há PR remoto para `midaz-adapter` nem para `sdk-v2`. Branches ou worktrees locais não são evidência de entrega; ambas permanecem Pending e não são marcadas como entregues. Consequentemente, `integration-release` continua bloqueada: seu plano deferred não é autorado e a wave 2 não pode começar até as duas lanes restantes da wave 1 serem mergeadas.
 
 Nota de ambiente: nesta máquina (mordor) os worktrees são criados com `agent new lerian-mcp-server <slug>`, que produz `/srv/worktrees/<slug>` na branch `agent/<slug>` — equivalente local de ring-default:creating-worktrees, substituindo o default `../<repo>-worktrees/`.
 
 ## Waves
 
-- **Wave 1** — `midaz-adapter`, `sdk-v2` e `release-eng`, lançadas juntas, worktrees e executores independentes.
-- **Wave 2** — `integration-release`, desbloqueada quando as três lanes da wave 1 lerem Merged. Seu plano é autorado nesse momento, contra o código realmente mergeado.
+- **Wave 1** — `release-eng` está Merged via [PR #137](https://github.com/LerianStudio/lerian-mcp-server/pull/137). `midaz-adapter` e `sdk-v2` permanecem Pending: nenhuma tem evidência de PR remoto, portanto não são tratadas como entregues.
+- **Wave 2** — `integration-release` continua bloqueada até as três lanes da wave 1 estarem Merged. O gate de `release-eng` está satisfeito, mas `midaz-adapter` e `sdk-v2` ainda bloqueiam a autoria do plano deferred e o início da wave 2.
 
-**Estado da base (afeta a verificação das lanes):** `main` hoje NÃO passa `npm test` — `test/runtime-surface-registry.test.js` falha em import (`src/products/midaz/index.js` inexistente). Somente `midaz-adapter` fica 100% verde standalone; `sdk-v2` e `release-eng` verificam com comandos scoped ao próprio escopo e só abrem/finalizam PR após rebase pós-merge de `midaz-adapter` (ver Merge Order). Isso é uma exceção documentada à regra "lane verde standalone", causada por defeito pré-existente da base que exatamente uma lane conserta.
+**Estado da base (reconciliado em 2026-08-27):** a falha de import anteriormente registrada para `src/products/midaz/index.js` não existe mais em `main`: o arquivo entrou no [PR #137](https://github.com/LerianStudio/lerian-mcp-server/pull/137). Em checkout limpo da `main`, `npm run build && npm test` passa. A exceção histórica de verificação standalone não deve ser usada para marcar `midaz-adapter` ou `sdk-v2` como entregues; ambas ainda exigem PR remoto e merge.
 
 ## Frozen Contracts
 
@@ -90,14 +96,14 @@ Interseção vazia por construção. Um arquivo fora da própria lista = parar e
 **Goal:** 4.0.0 publicado, funcional e verificado; repositório sem restos do mundo legado.
 **Scope:** teste de boot do artefato (`npm pack` → instalar → subir → assertar FC-2) wired no CI como gate de release; verificação de ausência (`src/api/` inexistente; nenhuma referência aos env vars legados de FC-1; nenhuma importação de `@modelcontextprotocol/sdk` remanescente; nenhum workflow de publish fora do pipeline de FC-4); reconciliação de `develop` com `main` (ação destrutiva — confirmar com Fred antes do force-push); execução do release 4.0.0; `npm deprecate` do pacote legado `@lerianstudio/midaz-mcp-server` com mensagem apontando o novo; smoke test do artefato publicado (`npx @lerianstudio/lerian-mcp-server@latest` sobe e anuncia FC-2).
 **Depends on:** midaz-adapter, sdk-v2, release-eng (todas Merged).
+**Gate atual (GitHub verificado em 2026-08-27):** bloqueada por `midaz-adapter` e `sdk-v2`; `release-eng` já está Merged no [PR #137](https://github.com/LerianStudio/lerian-mcp-server/pull/137). Não autorar nem iniciar esta lane até que as duas dependências restantes tenham evidência de PR remoto mergeado.
 **Done when:** `npx @lerianstudio/lerian-mcp-server@latest` inicializa em ambiente limpo com a superfície FC-2; pacote legado deprecado; `develop` reconciliado.
 
 ## Merge Order
 
-1. `midaz-adapter` merge primeiro — é a única lane verde standalone (a base tem teste quebrado que só ela conserta).
-2. `sdk-v2` rebasa na `main` atualizada, roda a suíte completa verde, abre/atualiza PR, merge.
-3. `release-eng` rebasa, CI completa verde, merge.
-4. `integration-release` (wave 2) ramifica da `main` final.
+**Ordem planejada original (preservada como decisão histórica):** `midaz-adapter` → `sdk-v2` → `release-eng` → `integration-release`.
+
+**Ordem restante, reconciliada em 2026-08-27:** `release-eng` já foi mergeada no [PR #137](https://github.com/LerianStudio/lerian-mcp-server/pull/137). `midaz-adapter` precisa abrir e mergear seu PR remoto; depois `sdk-v2` rebasa na `main` atualizada, passa a suíte completa, abre/atualiza seu PR e mergeia. `integration-release` (wave 2) só ramifica da `main` final após esses dois merges.
 
 Depois de cada merge, toda lane ainda aberta rebasa na nova base antes de continuar. Desenvolvimento das três lanes é concorrente; apenas merge é ordenado.
 
