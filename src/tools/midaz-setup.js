@@ -290,14 +290,14 @@ curl https://your-domain.com/onboarding/health
 curl https://your-domain.com/transaction/health
 \`\`\`
 
-For detailed Helm chart documentation, visit: https://docs.lerian.studio/deployment/helm`;
+For detailed Helm chart documentation, visit: https://docs.lerian.studio/en/platform/deploy/midaz/midaz-installation`;
 
       return {
         success: true,
         instructions: instructions,
         deploymentType: "production",
         helmRepository: "https://charts.lerian.studio",
-        docsUrl: "https://docs.lerian.studio/deployment/helm"
+        docsUrl: "https://docs.lerian.studio/en/platform/deploy/midaz/midaz-installation"
       };
     })
   );
@@ -440,14 +440,14 @@ kubectl apply -f hpa-config.yaml
 - Encrypt data at rest and in transit
 - Regular security updates
 
-For complete cloud deployment guides, visit: https://docs.lerian.studio/deployment/cloud`;
+For complete cloud deployment guides, visit: https://docs.lerian.studio/en/start-here/evaluate-and-deploy/deployment-models`;
 
       return {
         success: true,
         instructions: instructions,
         provider: provider,
         terraformRepository: "https://github.com/LerianStudio/midaz-terraform",
-        docsUrl: `https://docs.lerian.studio/deployment/cloud/${provider}`
+        docsUrl: "https://docs.lerian.studio/en/start-here/evaluate-and-deploy/deployment-models"
       };
     })
   );

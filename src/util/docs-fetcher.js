@@ -22,45 +22,45 @@ const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
 // Documentation URL mappings based on actual docs.lerian.studio structure
 const urlMappings = {
   // Models (Core Entities)
-  'models/entity-relationships': '/docs/core-entities.md',
-  'models/entity-hierarchy': '/docs/core-entities.md',
-  'models/organization': '/docs/organizations.md',
-  'models/ledger': '/docs/ledgers.md',
-  'models/account': '/docs/accounts.md',
-  'models/portfolio': '/docs/portfolios.md',
-  'models/segment': '/docs/segments.md',
-  'models/asset': '/docs/assets.md',
-  'models/transaction': '/docs/transactions.md',
-  'models/operation': '/docs/operations.md',
-  'models/balance': '/reference/list-balances.md',
+  'models/entity-relationships': '/en/products/midaz/core-entities.md',
+  'models/entity-hierarchy': '/en/products/midaz/core-entities.md',
+  'models/organization': '/en/products/midaz/organizations.md',
+  'models/ledger': '/en/products/midaz/ledgers.md',
+  'models/account': '/en/products/midaz/accounts.md',
+  'models/portfolio': '/en/products/midaz/portfolios.md',
+  'models/segment': '/en/products/midaz/segments.md',
+  'models/asset': '/en/products/midaz/assets.md',
+  'models/transaction': '/en/products/midaz/transactions.md',
+  'models/operation': '/en/products/midaz/operations.md',
+  'models/balance': '/en/reference/products/midaz/v2/get-all-balances.md',
   
   // Components (Midaz Console and Services)
-  'components/onboarding/overview': '/docs/midaz-console-onboarding.md',
-  'components/onboarding/architecture': '/docs/architecture.md',
-  'components/onboarding/api': '/reference/introduction.md',
-  'components/onboarding/setup': '/docs/midaz-console-setup.md',
-  'components/transaction/overview': '/docs/managing-transactions.md',
-  'components/transaction/api': '/reference/create-a-transaction-using-json.md',
-  'components/transaction/setup': '/docs/creating-the-first-transaction.md',
-  'components/mdz/overview': '/docs/about-midaz-cli.md',
-  'components/mdz/setup': '/docs/midaz-setup.md',
+  'components/onboarding/overview': '/en/products/midaz/console/midaz-console-onboarding.md',
+  'components/onboarding/architecture': '/en/products/midaz/architecture.md',
+  'components/onboarding/api': '/en/reference/introduction.md',
+  'components/onboarding/setup': '/en/products/midaz/console/midaz-console-setup-path.md',
+  'components/transaction/overview': '/en/products/midaz/console/managing-transactions.md',
+  'components/transaction/api': '/en/reference/products/midaz/v1/create-transaction-json.md',
+  'components/transaction/setup': '/en/products/midaz/console/creating-a-transaction.md',
+  'components/mdz/overview': '/en/products/midaz/midaz-setup.md',
+  'components/mdz/setup': '/en/products/midaz/midaz-setup.md',
   
   // Infrastructure
-  'infra/overview': '/docs/architecture.md',
-  'infra/postgres': '/docs/data-model.md',
-  'infra/mongodb': '/docs/data-model.md',
-  'infra/redis': '/docs/architecture.md',
-  'infra/rabbitmq': '/docs/architecture.md',
-  'infra/grafana': '/docs/observability-in-midaz.md',
+  'infra/overview': '/en/products/midaz/architecture.md',
+  'infra/postgres': '/en/products/midaz/data-model.md',
+  'infra/mongodb': '/en/products/midaz/data-model.md',
+  'infra/redis': '/en/products/midaz/architecture.md',
+  'infra/rabbitmq': '/en/products/midaz/architecture.md',
+  'infra/grafana': '/en/products/midaz/observability-in-midaz.md',
   
   // Documentation
-  'docs/overview': '/docs/what-is-midaz.md',
-  'docs/getting-started': '/docs/getting-started.md',
-  'docs/architecture': '/docs/architecture.md',
-  'docs/domain-driven-design': '/docs/core-features.md',
-  'docs/cqrs': '/docs/transactions-dsl.md',
-  'docs/security': '/docs/security.md',
-  'docs/troubleshooting': '/docs/faq.md'
+  'docs/overview': '/en/products/midaz/what-is-midaz.md',
+  'docs/getting-started': '/en/start-here/getting-started.md',
+  'docs/architecture': '/en/products/midaz/architecture.md',
+  'docs/domain-driven-design': '/en/products/midaz/core-features.md',
+  'docs/cqrs': '/en/products/midaz/transactions.md',
+  'docs/security': '/en/products/midaz/security.md',
+  'docs/troubleshooting': '/en/products/midaz/faq.md'
 };
 
 /**

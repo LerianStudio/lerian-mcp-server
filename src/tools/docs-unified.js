@@ -67,7 +67,7 @@ export const registerUnifiedDocumentationTool = (server) => {
 
       useCase: z.string().optional().describe("Specific use case for code generation, 5-100 characters (REQUIRED for: code-examples). Examples: 'create first transaction', 'user account onboarding', 'check account balance', 'transfer between portfolios', 'handle payment errors'. Be specific about the business scenario you're implementing."),
 
-      path: z.string().optional().describe("Exact documentation file path (REQUIRED for: read operation). Format: '/category/filename.md' or 'section/subsection'. Examples: '/reference/create-asset.md', '/guides/getting-started.md', 'models/transaction'. Get valid paths from browse or sitemap operations first."),
+      path: z.string().optional().describe("Exact documentation file path (REQUIRED for: read operation). Format: '/category/filename.md' or 'section/subsection'. Examples: '/en/reference/products/midaz/v1/create-asset.md', '/en/start-here/getting-started.md', 'models/transaction'. Get valid paths from browse or sitemap operations first."),
 
       category: z.string().optional().describe("Documentation category filter (optional for: browse). Valid categories: 'api' (REST endpoints), 'guides' (tutorials), 'examples' (code samples), 'models' (data structures), 'components' (system parts). Omit to see all categories."),
 
