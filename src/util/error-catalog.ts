@@ -75,7 +75,7 @@ export const ErrorCatalog: Record<string, ErrorDefinition> = {
       'Run: npm run cli to configure authentication',
       'Test backend service health: curl <backend-url>/health'
     ],
-    helpUrl: 'https://docs.lerian.studio/troubleshooting/auth',
+    helpUrl: 'https://docs.lerian.studio/en/reference/error-handling',
     severity: 'high'
   },
 
@@ -89,7 +89,7 @@ export const ErrorCatalog: Record<string, ErrorDefinition> = {
       'Token will be automatically refreshed on next request',
       'If issue persists, clear token cache: rm -rf ~/.midaz/cache'
     ],
-    helpUrl: 'https://docs.lerian.studio/troubleshooting/auth',
+    helpUrl: 'https://docs.lerian.studio/en/reference/error-handling',
     severity: 'medium'
   },
 
@@ -107,7 +107,7 @@ export const ErrorCatalog: Record<string, ErrorDefinition> = {
       'Check you\'re using the correct organization_id and ledger_id',
       'Verify your API key has access to this resource'
     ],
-    helpUrl: 'https://docs.lerian.studio/troubleshooting/resources',
+    helpUrl: 'https://docs.lerian.studio/en/reference/error-handling',
     severity: 'medium'
   },
 
@@ -124,7 +124,7 @@ export const ErrorCatalog: Record<string, ErrorDefinition> = {
       'Check backend URL points to correct environment',
       'Create organization if needed: use create-organization tool'
     ],
-    helpUrl: 'https://docs.lerian.studio/docs/organizations',
+    helpUrl: 'https://docs.lerian.studio/en/products/midaz/organizations',
     severity: 'medium'
   },
 
@@ -140,7 +140,7 @@ export const ErrorCatalog: Record<string, ErrorDefinition> = {
       'Verify both organization_id and ledger_id are correct',
       'Create ledger if needed: use create-ledger tool'
     ],
-    helpUrl: 'https://docs.lerian.studio/docs/ledgers',
+    helpUrl: 'https://docs.lerian.studio/en/products/midaz/ledgers',
     severity: 'medium'
   },
 
@@ -158,7 +158,7 @@ export const ErrorCatalog: Record<string, ErrorDefinition> = {
       'Check field length limits (e.g., name: 255 chars, description: 1000 chars)',
       'Review tool schema: use show-all-tools to see expected parameters'
     ],
-    helpUrl: 'https://docs.lerian.studio/troubleshooting/validation',
+    helpUrl: 'https://docs.lerian.studio/en/reference/error-handling',
     severity: 'medium'
   },
 
@@ -174,7 +174,7 @@ export const ErrorCatalog: Record<string, ErrorDefinition> = {
       'Get valid UUIDs from list operations first',
       'Don\'t manually create UUIDs - use system-generated ones'
     ],
-    helpUrl: 'https://docs.lerian.studio/troubleshooting/validation',
+    helpUrl: 'https://docs.lerian.studio/en/reference/error-handling',
     severity: 'low'
   },
 
@@ -192,7 +192,7 @@ export const ErrorCatalog: Record<string, ErrorDefinition> = {
       'Check firewall rules allow outbound connections',
       'Try using stub mode: set MIDAZ_USE_STUBS=true'
     ],
-    helpUrl: 'https://docs.lerian.studio/troubleshooting/network',
+    helpUrl: 'https://docs.lerian.studio/en/reference/error-handling',
     severity: 'high'
   },
 
@@ -210,7 +210,7 @@ export const ErrorCatalog: Record<string, ErrorDefinition> = {
       'Simplify the request (reduce filters, limit results)',
       'Increase timeout: set MIDAZ_TIMEOUT=30000 (30 seconds)'
     ],
-    helpUrl: 'https://docs.lerian.studio/troubleshooting/performance',
+    helpUrl: 'https://docs.lerian.studio/en/reference/error-handling',
     severity: 'medium'
   },
 
@@ -227,7 +227,7 @@ export const ErrorCatalog: Record<string, ErrorDefinition> = {
       'Batch operations when possible',
       'Contact support for higher rate limits'
     ],
-    helpUrl: 'https://docs.lerian.studio/troubleshooting/rate-limits',
+    helpUrl: 'https://docs.lerian.studio/en/reference/error-handling',
     severity: 'medium'
   },
 
@@ -243,9 +243,9 @@ export const ErrorCatalog: Record<string, ErrorDefinition> = {
       'Run configuration wizard: npm run cli',
       'Check configuration file syntax (JSON format)',
       'Set required environment variables: MIDAZ_ONBOARDING_URL, MIDAZ_API_KEY',
-      'Review configuration docs: https://docs.lerian.studio/configuration'
+      'Review configuration docs: https://docs.lerian.studio/en/products/midaz/midaz-setup'
     ],
-    helpUrl: 'https://docs.lerian.studio/configuration',
+    helpUrl: 'https://docs.lerian.studio/en/products/midaz/midaz-setup',
     severity: 'high'
   },
 
@@ -264,7 +264,7 @@ export const ErrorCatalog: Record<string, ErrorDefinition> = {
       'Use stub mode for testing: set MIDAZ_USE_STUBS=true',
       'Contact support if issue persists'
     ],
-    helpUrl: 'https://docs.lerian.studio/troubleshooting/services',
+    helpUrl: 'https://docs.lerian.studio/en/reference/error-handling',
     severity: 'critical'
   },
 
@@ -282,7 +282,7 @@ export const ErrorCatalog: Record<string, ErrorDefinition> = {
       'Report issue to support with request details',
       'Use stub mode as workaround: set MIDAZ_USE_STUBS=true'
     ],
-    helpUrl: 'https://docs.lerian.studio/troubleshooting/errors',
+    helpUrl: 'https://docs.lerian.studio/en/reference/error-handling',
     severity: 'high'
   },
 
@@ -298,9 +298,9 @@ export const ErrorCatalog: Record<string, ErrorDefinition> = {
       'Verify API key has correct permissions',
       'Check you\'re accessing resources in your organization',
       'Contact admin to grant required permissions',
-      'Review permission model: https://docs.lerian.studio/security/permissions'
+      'Review permission model: https://docs.lerian.studio/en/platform/access-manager'
     ],
-    helpUrl: 'https://docs.lerian.studio/security/permissions',
+    helpUrl: 'https://docs.lerian.studio/en/platform/access-manager',
     severity: 'high'
   },
 
@@ -317,7 +317,7 @@ export const ErrorCatalog: Record<string, ErrorDefinition> = {
       'Update existing resource instead: use update operations',
       'Delete old resource first if appropriate'
     ],
-    helpUrl: 'https://docs.lerian.studio/troubleshooting/data',
+    helpUrl: 'https://docs.lerian.studio/en/reference/error-handling',
     severity: 'medium'
   },
 
@@ -335,7 +335,7 @@ export const ErrorCatalog: Record<string, ErrorDefinition> = {
       'Review business rules for this operation',
       'Contact support if state seems incorrect'
     ],
-    helpUrl: 'https://docs.lerian.studio/troubleshooting/state',
+    helpUrl: 'https://docs.lerian.studio/en/reference/error-handling',
     severity: 'medium'
   }
 };

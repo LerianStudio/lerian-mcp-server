@@ -22,45 +22,45 @@ let manifestCacheTime = 0;
  */
 const staticMappings = {
   // Models (Core Entities)
-  'models/organization': '/docs/organizations.md',
-  'models/ledger': '/docs/ledgers.md',
-  'models/account': '/docs/accounts.md',
-  'models/transaction': '/docs/transactions.md',
-  'models/operation': '/docs/operations.md',
-  'models/balance': '/docs/balances.md',
-  'models/portfolio': '/docs/portfolios.md',
-  'models/segment': '/docs/segments.md',
-  'models/asset': '/docs/assets.md',
-  'models/entity-hierarchy': '/concepts/entity-hierarchy.md',
-  'models/entity-relationships': '/concepts/entity-hierarchy.md',
+  'models/organization': '/en/products/midaz/organizations.md',
+  'models/ledger': '/en/products/midaz/ledgers.md',
+  'models/account': '/en/products/midaz/accounts.md',
+  'models/transaction': '/en/products/midaz/transactions.md',
+  'models/operation': '/en/products/midaz/operations.md',
+  'models/balance': '/en/products/midaz/balances.md',
+  'models/portfolio': '/en/products/midaz/portfolios.md',
+  'models/segment': '/en/products/midaz/segments.md',
+  'models/asset': '/en/products/midaz/assets.md',
+  'models/entity-hierarchy': '/en/products/midaz/core-entities.md',
+  'models/entity-relationships': '/en/products/midaz/core-entities.md',
   
   // Components
-  'components/onboarding': '/docs/onboarding/overview.md',
-  'components/onboarding/setup': '/docs/onboarding/setup.md',
-  'components/onboarding/api': '/docs/onboarding/api.md',
-  'components/onboarding/architecture': '/docs/onboarding/architecture.md',
-  'components/transaction': '/docs/transaction/overview.md',
-  'components/transaction/setup': '/docs/transaction/setup.md',
-  'components/transaction/api': '/docs/transaction/api.md',
-  'components/mdz': '/docs/mdz/overview.md',
-  'components/mdz/setup': '/docs/mdz/setup.md',
+  'components/onboarding': '/en/products/midaz/console/midaz-console-onboarding.md',
+  'components/onboarding/setup': '/en/products/midaz/console/midaz-console-setup-path.md',
+  'components/onboarding/api': '/en/reference/introduction.md',
+  'components/onboarding/architecture': '/en/products/midaz/architecture.md',
+  'components/transaction': '/en/products/midaz/console/managing-transactions.md',
+  'components/transaction/setup': '/en/products/midaz/console/creating-a-transaction.md',
+  'components/transaction/api': '/en/reference/products/midaz/v1/create-transaction-json.md',
+  'components/mdz': '/en/products/midaz/midaz-setup.md',
+  'components/mdz/setup': '/en/products/midaz/midaz-setup.md',
   
   // Infrastructure
-  'infra/overview': '/docs/infrastructure/overview.md',
-  'infra/postgres': '/docs/infrastructure/postgres.md',
-  'infra/mongodb': '/docs/infrastructure/mongodb.md',
-  'infra/redis': '/docs/infrastructure/redis.md',
-  'infra/rabbitmq': '/docs/infrastructure/rabbitmq.md',
-  'infra/grafana': '/docs/infrastructure/grafana.md',
+  'infra/overview': '/en/products/midaz/architecture.md',
+  'infra/postgres': '/en/products/midaz/data-model.md',
+  'infra/mongodb': '/en/products/midaz/data-model.md',
+  'infra/redis': '/en/products/midaz/architecture.md',
+  'infra/rabbitmq': '/en/products/midaz/architecture.md',
+  'infra/grafana': '/en/products/midaz/observability-in-midaz.md',
   
   // Documentation
-  'docs/overview': '/docs/overview.md',
-  'docs/architecture': '/docs/architecture.md',
-  'docs/getting-started': '/docs/getting-started.md',
-  'docs/security': '/docs/security.md',
-  'docs/troubleshooting': '/docs/troubleshooting.md',
-  'docs/domain-driven-design': '/concepts/domain-driven-design.md',
-  'docs/cqrs': '/concepts/cqrs.md'
+  'docs/overview': '/en/products/midaz/what-is-midaz.md',
+  'docs/architecture': '/en/products/midaz/architecture.md',
+  'docs/getting-started': '/en/start-here/getting-started.md',
+  'docs/security': '/en/products/midaz/security.md',
+  'docs/troubleshooting': '/en/products/midaz/faq.md',
+  'docs/domain-driven-design': '/en/products/midaz/core-features.md',
+  'docs/cqrs': '/en/products/midaz/transactions.md'
 };
 
 /**
