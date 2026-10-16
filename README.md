@@ -199,7 +199,7 @@ Once connected, you can ask your AI assistant:
 - ✅ Read-only access (can't modify your data)
 - ✅ No API keys required for basic usage
 - ✅ All data stays on your computer
-- ✅ Open source and auditable
+- ✅ Source available (ELv2) and auditable
 
 ## ⚙️ Configuration
 
