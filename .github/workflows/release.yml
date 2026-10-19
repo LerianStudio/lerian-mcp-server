@@ -129,7 +129,7 @@ jobs:
 
       - name: Create Release
         id: semantic
-        uses: cycjimmy/semantic-release-action@v4
+        uses: cycjimmy/semantic-release-action@v8
         with:
           semantic_version: 25.0.3
           extra_plugins: |
